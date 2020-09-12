@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -28,6 +29,42 @@ var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
+
+var (
+	uaRegList = []*regexp.Regexp{}
+	uaPre     = []string{
+		"ISUCON",
+		"Mediapartners-ISUCON",
+	}
+	uaSuf = []string{
+		"ISUCONCoffee",
+		"ISUCONFeedSeeker",
+	}
+)
+
+func checkUserAgent(ua string) bool {
+	for _, v := range uaPre {
+		if strings.HasPrefix(ua, v) {
+			return false
+		}
+	}
+	for _, v := range uaSuf {
+		if strings.HasSuffix(ua, v) {
+			return false
+		}
+	}
+	return true
+}
+
+func checkUserAgentMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if ok := checkUserAgent(c.Request().UserAgent()); !ok {
+			return c.NoContent(http.StatusServiceUnavailable)
+		}
+		err := next(c)
+		return err
+	}
+}
 
 type InitializeResponse struct {
 	Language string `json:"language"`
@@ -250,6 +287,7 @@ func main() {
 	e.Logger.SetLevel(log.DEBUG)
 
 	// Middleware
+	e.Use(checkUserAgentMiddleware)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
