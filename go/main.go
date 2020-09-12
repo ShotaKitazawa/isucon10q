@@ -806,7 +806,6 @@ func searchEstates(c echo.Context) error {
 	var conditionLength int
 	var doorHeightRange, doorWidthRange, rentRange *Range
 	var features []string
-	var doorHeightFlag, doorWidthFlag, rentFlag, featuresFlag bool
 	var err error
 
 	if c.QueryParam("doorHeightRangeId") != "" {
@@ -827,7 +826,6 @@ func searchEstates(c echo.Context) error {
 
 		conditionLength++
 		doorHeightRange = doorHeight
-		doorHeightFlag = true
 	}
 
 	if c.QueryParam("doorWidthRangeId") != "" {
@@ -848,7 +846,6 @@ func searchEstates(c echo.Context) error {
 
 		conditionLength++
 		doorWidthRange = doorWidth
-		doorWidthFlag = true
 	}
 
 	if c.QueryParam("rentRangeId") != "" {
@@ -860,13 +857,11 @@ func searchEstates(c echo.Context) error {
 
 		conditionLength++
 		rentRange = estateRent
-		rentFlag = true
 	}
 
 	if c.QueryParam("features") != "" {
 		features = strings.Split(c.QueryParam("features"), ",")
 		conditionLength++
-		featuresFlag = true
 	}
 
 	if conditionLength == 0 {
@@ -890,22 +885,22 @@ func searchEstates(c echo.Context) error {
 
 out:
 	for _, estate := range estateMap {
-		if doorHeightFlag {
+		if doorHeightRange.ID != -1 {
 			if (doorHeightRange.Max == -1 && estate.DoorHeight < doorHeightRange.Min) || (estate.DoorHeight < doorHeightRange.Min || doorWidthRange.Max <= estate.DoorHeight) {
 				continue
 			}
 		}
-		if doorWidthFlag {
+		if doorWidthRange.ID != -1 {
 			if (doorWidthRange.Max == -1 && estate.DoorWidth < doorWidthRange.Min) || (estate.DoorWidth < doorWidthRange.Min || doorWidthRange.Max <= estate.DoorWidth) {
 				continue
 			}
 		}
-		if rentFlag {
+		if rentRange.ID != -1 {
 			if (rentRange.Max == -1 && estate.DoorWidth < rentRange.Min) || (estate.DoorWidth < rentRange.Min || rentRange.Max <= estate.DoorWidth) {
 				continue
 			}
 		}
-		if featuresFlag {
+		if len(features) != 0 {
 			//for _, f := range strings.Split(estate.Features, ",") {
 			for _, f := range features {
 				if !contains(strings.Split(estate.Features, ","), f) {
