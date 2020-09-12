@@ -616,17 +616,23 @@ func searchChairs(c echo.Context) error {
 		}
 
 		if c.QueryParam("features") != "" {
+			isMatched := true
+			fmt.Println(c.QueryParam("features"))
 			for _, f := range strings.Split(c.QueryParam("features"), ",") {
-				var isMached bool
+				var mm bool
 				for _, ff := range strings.Split(chair.Features, ",") {
+					fmt.Printf("%s = %s\n", f, ff)
 					if f == ff {
-						isMached = true
+						mm = true
 					}
 				}
 				consCount++
-				if !isMached {
-					continue
+				if !mm {
+					isMatched = false
 				}
+			}
+			if !isMatched {
+				continue
 			}
 		}
 
