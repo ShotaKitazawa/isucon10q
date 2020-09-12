@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -29,58 +28,6 @@ var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
-
-var (
-	uaReg = []*regexp.Regexp{
-		regexp.MustCompile(`ISUCONbot(-Mobile)?`),
-		regexp.MustCompile(`ISUCONbot-Image\/`),
-		regexp.MustCompile(`Mediapartners-ISUCON`),
-		regexp.MustCompile(`ISUCONCoffee`),
-		regexp.MustCompile(`ISUCONFeedSeeker(Beta)?`),
-		regexp.MustCompile(`crawler \(https:\/\/isucon\.invalid\/(support\/faq\/|help\/jp\/)`),
-		regexp.MustCompile(`isubot`),
-		regexp.MustCompile(`Isupider`),
-		regexp.MustCompile(`Isupider(-image)?\+`),
-		regexp.MustCompile(`(bot|crawler|spider)(?:[-_ .\/;@()]|$)`),
-	}
-	uaPre = []string{
-		"ISUCON",
-		"Mediapartners-ISUCON",
-	}
-	uaSuf = []string{
-		"ISUCONCoffee",
-		"ISUCONFeedSeeker",
-	}
-)
-
-func checkUserAgent(ua string) bool {
-	for _, v := range uaReg {
-		if v.MatchString(ua) {
-			return false
-		}
-	}
-	//for _, v := range uaPre {
-	//	if strings.HasPrefix(ua, v) {
-	//		return false
-	//	}
-	//}
-	//for _, v := range uaSuf {
-	//	if strings.HasSuffix(ua, v) {
-	//		return false
-	//	}
-	//}
-	return true
-}
-
-func checkUserAgentMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(c echo.Context) error {
-		if ok := checkUserAgent(c.Request().UserAgent()); !ok {
-			return c.NoContent(http.StatusServiceUnavailable)
-		}
-		err := next(c)
-		return err
-	}
-}
 
 type InitializeResponse struct {
 	Language string `json:"language"`
@@ -303,7 +250,6 @@ func main() {
 	e.Logger.SetLevel(log.DEBUG)
 
 	// Middleware
-	e.Use(checkUserAgentMiddleware)
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
