@@ -441,7 +441,8 @@ func searchChairs(c echo.Context) error {
 	con := pool.Get()
 	keys, err := redis.Strings(con.Do("KEYS", "*"))
 	if err != nil {
-		panic(err)
+		c.Echo().Logger.Errorf("redis error", err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
 	con.Close()
 	for _, key := range keys {
