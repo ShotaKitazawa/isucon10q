@@ -623,11 +623,11 @@ func searchChairs(c echo.Context) error {
 		}
 		returnChairs = append(returnChairs, chairStructs[i])
 	}
-	sort.Slice(returnChairs, func(i, j int) bool {
-		return returnChairs[i].ID < returnChairs[j].ID
-	})
 	sort.SliceStable(returnChairs, func(i, j int) bool {
 		return returnChairs[i].Popularity > returnChairs[j].Popularity
+	})
+	sort.SliceStable(returnChairs, func(i, j int) bool {
+		return returnChairs[i].ID < returnChairs[j].ID
 	})
 
 	var res ChairSearchResponse
