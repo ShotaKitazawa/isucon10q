@@ -887,6 +887,8 @@ func searchEstates(c echo.Context) error {
 	}
 
 	var result []Estate
+
+out:
 	for _, estate := range estateStructs {
 		if doorHeightFlag {
 			if (doorHeightRange.Max == -1 && estate.DoorHeight < doorHeightRange.Min) || (estate.DoorHeight < doorHeightRange.Min || doorWidthRange.Max <= estate.DoorHeight) {
@@ -907,7 +909,7 @@ func searchEstates(c echo.Context) error {
 			//for _, f := range strings.Split(estate.Features, ",") {
 			for _, f := range features {
 				if !contains(strings.Split(estate.Features, ","), f) {
-					continue
+					continue out
 				}
 			}
 		}
