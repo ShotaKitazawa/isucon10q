@@ -616,17 +616,17 @@ func searchChairs(c echo.Context) error {
 		}
 
 		if c.QueryParam("features") != "" {
-			var isMached bool
 			for _, f := range strings.Split(c.QueryParam("features"), ",") {
+				var isMached bool
 				for _, ff := range strings.Split(chair.Features, ",") {
 					if f == ff {
 						isMached = true
 					}
 				}
 				consCount++
-			}
-			if !isMached {
-				continue
+				if !isMached {
+					continue
+				}
 			}
 		}
 
