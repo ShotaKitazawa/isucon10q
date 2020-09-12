@@ -448,7 +448,6 @@ func postChair(c echo.Context) error {
 }
 
 func searchChairs(c echo.Context) error {
-	conditions := make([]string, 0)
 	countCondition := 0
 	chairPrices := &Range{
 		ID:  -1,
