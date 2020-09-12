@@ -448,93 +448,147 @@ func postChair(c echo.Context) error {
 }
 
 func searchChairs(c echo.Context) error {
-	countCondition := 0
-	chairPrices := &Range{
-		ID:  -1,
-		Min: -1,
-		Max: -1,
-	}
-	chairHeights := &Range{
-		ID:  -1,
-		Min: -1,
-		Max: -1,
-	}
-	chairWidths := &Range{
-		ID:  -1,
-		Min: -1,
-		Max: -1,
-	}
-	chairDepths := &Range{
-		ID:  -1,
-		Min: -1,
-		Max: -1,
-	}
-	kind := ""
-	color := ""
-	features := make([]string, 0)
-	returnChairs := make([]Chair, 0)
+	var consCount int
+	chairs := []Chair{}
 
-	if c.QueryParam("priceRangeId") != "" {
-		chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
+	for _, chair := range chairMap {
+		if c.QueryParam("priceRangeId") != "" {
+			chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if chairPrice.Min != -1 {
+				consCount++
+				if chair.Price < chairPrice.Min {
+					continue
+				}
+			}
+			if chairPrice.Max != -1 {
+				consCount++
+				if chair.Price > chairPrice.Max {
+					continue
+				}
+			}
 		}
-		chairPrices.ID = chairPrice.ID
-		chairPrices.Max = chairPrice.Max
-		chairPrices.Min = chairPrice.Min
-		countCondition++
-	}
-	if c.QueryParam("heightRangeId") != "" {
-		chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
+
+		if c.QueryParam("heightRangeId") != "" {
+			chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if chairHeight.Min != -1 {
+				consCount++
+				if chair.Height < chairHeight.Min {
+					continue
+				}
+			}
+			if chairHeight.Max != -1 {
+				consCount++
+				if chair.Height > chairHeight.Max {
+					continue
+				}
+			}
 		}
-		chairHeights.ID = chairHeight.ID
-		chairHeights.Max = chairHeight.Max
-		chairHeights.Min = chairHeight.Min
-		countCondition++
-	}
-	if c.QueryParam("widthRangeId") != "" {
-		chairWidth, err := getRange(chairSearchCondition.Width, c.QueryParam("widthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("widthRangeID invalid, %v : %v", c.QueryParam("widthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
+
+		if c.QueryParam("widthRangeId") != "" {
+			chairWidth, err := getRange(chairSearchCondition.Width, c.QueryParam("widthRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("widthRangeID invalid, %v : %v", c.QueryParam("widthRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if chairWidth.Min != -1 {
+				consCount++
+				if chair.Width < chairWidth.Min {
+					continue
+				}
+			}
+			if chairWidth.Max != -1 {
+				consCount++
+				if chair.Width > chairWidth.Max {
+					continue
+				}
+			}
 		}
-		chairWidths = chairWidth
-		countCondition++
-	}
 
-	if c.QueryParam("depthRangeId") != "" {
-		chairDepth, err := getRange(chairSearchCondition.Depth, c.QueryParam("depthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("depthRangeId invalid, %v : %v", c.QueryParam("depthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
+		if c.QueryParam("depthRangeId") != "" {
+			chairDepth, err := getRange(chairSearchCondition.Depth, c.QueryParam("depthRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("depthRangeId invalid, %v : %v", c.QueryParam("depthRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if chairDepth.Min != -1 {
+				consCount++
+				if chair.Depth < chairDepth.Min {
+					continue
+				}
+			}
+			if chairDepth.Max != -1 {
+				consCount++
+				if chair.Depth > chairDepth.Max {
+					continue
+				}
+			}
 		}
-		chairDepths = chairDepth
-		countCondition++
+
+		if c.QueryParam("kind") != "" {
+			consCount++
+			if chair.Kind != c.QueryParam("kind") {
+				continue
+			}
+		}
+
+		if c.QueryParam("color") != "" {
+			consCount++
+			if chair.Color != c.QueryParam("color") {
+				continue
+			}
+		}
+
+		if c.QueryParam("features") != "" {
+			isMatched := true
+			for _, f := range strings.Split(c.QueryParam("features"), ",") {
+				var mm bool
+				for _, ff := range strings.Split(chair.Features, ",") {
+					if f == ff {
+						mm = true
+					}
+				}
+				consCount++
+				if !mm {
+					isMatched = false
+				}
+			}
+			if !isMatched {
+				continue
+			}
+		}
+
+		if chair.Stock < 1 {
+			continue
+		}
+
+		chairs = append(chairs, chair)
 	}
 
-	if c.QueryParam("kind") != "" {
-		kind = c.QueryParam("kind")
-		countCondition++
-	}
-
-	if c.QueryParam("color") != "" {
-		color = c.QueryParam("color")
-		countCondition++
-	}
-
-	if c.QueryParam("features") != "" {
-		features = strings.Split(c.QueryParam("features"), ",")
-		countCondition++
-	}
-
-	if countCondition == 0 {
+	if consCount == 0 {
 		c.Echo().Logger.Infof("Search condition not found")
 		return c.NoContent(http.StatusBadRequest)
 	}
+
+	var res ChairSearchResponse
+
+	sort.Slice(chairs, func(i, j int) bool {
+		if chairs[i].Popularity == chairs[j].Popularity {
+			return chairs[i].ID < chairs[j].ID
+		}
+		return chairs[i].Popularity > chairs[j].Popularity
+	})
 
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
@@ -548,105 +602,18 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	for i := range chairMap {
-		// price で比較するとき
-
-		if chairPrices.ID != -1 && chairPrices.Max != -1 {
-			// max が -1 なら使わない
-			// 範囲に入ってなかったらスルー
-			if chairPrices.Min > chairMap[i].Price || chairMap[i].Price > chairPrices.Max {
-				continue
-			}
-		} else {
-			if chairPrices.ID != -1 {
-				if chairPrices.Min > chairMap[i].Price {
-					continue
-				}
-			}
-		}
-		fmt.Println(chairPrices, chairMap[i].Price)
-		fmt.Println("通る")
-		if chairHeights.ID != -1 && chairHeights.Max != -1 {
-			// max が -1 なら使わない
-			// 範囲に入ってなかったらスルー
-			if chairHeights.Min > chairMap[i].Height || chairMap[i].Height >= chairHeights.Max {
-				continue
-			}
-		} else {
-			if chairHeights.ID != -1 && chairHeights.Min < chairMap[i].Height {
-				continue
-			}
-		}
-		if chairWidths.ID != -1 && chairWidths.Max != -1 {
-			// max が -1 なら使わない
-			// 範囲に入ってなかったらスルー
-			if chairWidths.Min > chairMap[i].Width || chairMap[i].Width >= chairWidths.Max {
-				continue
-			}
-		} else {
-			if chairWidths.ID != -1 && chairWidths.Min < chairMap[i].Width {
-				continue
-			}
-		}
-		if chairDepths.ID != -1 && chairDepths.Max != -1 {
-			// max が -1 なら使わない
-			// 範囲に入ってなかったらスルー
-			if chairDepths.Min > chairMap[i].Depth || chairMap[i].Depth >= chairDepths.Max {
-				continue
-			}
-		} else {
-			if chairDepths.ID != -1 && chairDepths.Min < chairMap[i].Depth {
-				continue
-			}
-		}
-		// kind に入っていて kind が一致していなかったら対象じゃない
-		if kind != "" && chairMap[i].Kind != kind {
-			continue
-		}
-		if color != "" && chairMap[i].Color != color {
-			continue
-		}
-		if len(features) != 0 {
-			chairFeatures := strings.Split(chairMap[i].Features, ",")
-			count := 0
-			for j := range features {
-				for h := range chairFeatures {
-					if features[j] == chairFeatures[h] {
-						count++
-						continue
-					}
-				}
-			}
-			if count != len(features) {
-				continue
-			}
-		}
-		if chairMap[i].Stock <= 0 {
-			continue
-		}
-		returnChairs = append(returnChairs, chairStructs[i])
-	}
-	sort.SliceStable(returnChairs, func(i, j int) bool {
-		return returnChairs[i].ID < returnChairs[j].ID
-	})
-
-	sort.SliceStable(returnChairs, func(i, j int) bool {
-		return returnChairs[i].Popularity > returnChairs[j].Popularity
-	})
-
-	var res ChairSearchResponse
-	res.Count = int64(len(returnChairs))
+	res.Count = int64(len(chairs))
 
 	// paging
-	count := len(returnChairs)
+	count := len(chairs)
 
 	if (page+1)*perPage < count {
-		returnChairs = returnChairs[page*perPage : (page+1)*perPage]
+		chairs = chairs[page*perPage : (page+1)*perPage]
 	} else {
 		mod := count % perPage
-		returnChairs = returnChairs[page*perPage : (page)*perPage+mod]
+		chairs = chairs[page*perPage : (page)*perPage+mod]
 	}
-	res.Chairs = returnChairs
+	res.Chairs = chairs
 
 	return c.JSON(http.StatusOK, res)
 }
