@@ -517,10 +517,6 @@ func searchChairs(c echo.Context) error {
 	//}
 
 	for _, chair := range chairMap {
-		if chair.Stock < 1 {
-			continue
-		}
-
 		if c.QueryParam("priceRangeId") != "" {
 			chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
 			if err != nil {
@@ -632,6 +628,10 @@ func searchChairs(c echo.Context) error {
 			if !isMached {
 				continue
 			}
+		}
+
+		if chair.Stock < 1 {
+			continue
 		}
 
 		chairs = append(chairs, chair)
