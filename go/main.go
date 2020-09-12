@@ -533,8 +533,6 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	conditions = append(conditions, "stock > 0")
-
 	page, err := strconv.Atoi(c.QueryParam("page"))
 	if err != nil {
 		c.Logger().Infof("Invalid format page parameter : %v", err)
@@ -613,6 +611,9 @@ func searchChairs(c echo.Context) error {
 			if count != len(features) {
 				continue
 			}
+		}
+		if chairStructs[i].Stock <= 0 {
+			continue
 		}
 		returnChairs = append(returnChairs, chairStructs[i])
 	}
