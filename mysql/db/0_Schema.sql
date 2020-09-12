@@ -39,3 +39,19 @@ CREATE TABLE isuumo.chair
 
 ALTER TABLE isuumo.chair add index price_id_index(price,id);
 ALTER TABLE isuumo.estate add index price_id_index(rent,id);
+
+ALTER TABLE isuumo.chair add index price_height_width(price,height,width);
+ALTER TABLE isuumo.chair add index height_width(height,width);
+ALTER TABLE isuumo.chair add index price_width(price,width);
+ALTER TABLE isuumo.chair add index price_height(price,height);
+ALTER TABLE isuumo.chair add index price(price);
+ALTER TABLE isuumo.chair add index height(height);
+ALTER TABLE isuumo.chair add index width(width);
+
+ALTER TABLE isuumo.estate add index height_width_rent(door_height,door_width,rent);
+ALTER TABLE isuumo.estate add index width_rent(door_width,rent);
+ALTER TABLE isuumo.estate add index height_rent(door_height,rent);
+ALTER TABLE isuumo.estate add index height_width(door_height,door_width);
+ALTER TABLE isuumo.estate add index height(door_height);
+ALTER TABLE isuumo.estate add index width(door_width);
+ALTER TABLE isuumo.estate add index rent(rent);
