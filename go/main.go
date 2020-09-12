@@ -576,8 +576,6 @@ func searchChairs(c echo.Context) error {
 	})
 	count := len(chairs)
 	res.Count = int64(count)
-	res.Chairs = chairs[page*perPage : page*perPage+perPage]
-
 	if (page+1)*perPage < count {
 		chairs = chairs[page*perPage : (page+1)*perPage]
 	} else {
@@ -886,8 +884,6 @@ func searchEstates(c echo.Context) error {
 	})
 	count := len(estates)
 	res.Count = int64(count)
-	res.Estates = estates
-
 	if (page+1)*perPage < count {
 		estates = estates[page*perPage : (page+1)*perPage]
 	} else {
