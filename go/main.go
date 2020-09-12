@@ -32,7 +32,7 @@ var pool = &redis.Pool{
 	MaxIdle:     10,
 	MaxActive:   20,
 	IdleTimeout: 240 * time.Second,
-	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102") },
+	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102:6379") },
 }
 var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
