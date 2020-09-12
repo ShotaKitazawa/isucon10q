@@ -975,7 +975,8 @@ func searchEstateNazotte(c echo.Context) error {
 			estatesInPolygon = append(estatesInPolygon, validatedEstate)
 		}
 	}
-
+	fmt.Println(len(estatesInBoundingBox))
+	fmt.Println(len(estatesInPolygon))
 	var re EstateSearchResponse
 	re.Estates = []Estate{}
 	if len(estatesInPolygon) > NazotteLimit {
