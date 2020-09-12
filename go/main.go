@@ -554,6 +554,7 @@ func searchChairs(c echo.Context) error {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
 			if chairPrices.Min > chairStructs[i].Price || chairStructs[i].Price <= chairPrices.Max {
+				fmt.Println(chairPrices, chairStructs[i])
 				continue
 			}
 		} else {
