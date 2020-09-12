@@ -1,7 +1,11 @@
 package main
 
+import "sync"
+
 var estateMap map[int64]Estate
+var estateLock sync.Mutex
 var chairMap map[int64]Chair
+var chairLock sync.Mutex
 
 func initCache() {
 	estateMap = make(map[int64]Estate, 100000)
