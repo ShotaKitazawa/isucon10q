@@ -368,36 +368,55 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
-	params := []interface{}{}
-	vals := make([]string, 0, len(records))
+	type One struct {
+		ID              int    `db:"id"`
+		Name            string `db:"name"`
+		Description     string `db:"description"`
+		Thumbnail       string `db:"thumbnail"`
+		Price           int    `db:"price"`
+		Height          int    `db:"height"`
+		Width           int    `db:"width"`
+		Depth           int    `db:"depth"`
+		Color           string `db:"color"`
+		Features        string `db:"features"`
+		Kind            string `db:"kind"`
+		Popularity      int    `db:"popularity"`
+		PopularityMinus int    `db:"popularity_minus"`
+		Stock           int    `db:"stock"`
+	}
+	ones := make([]One, 0, len(records))
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextString())
-		params = append(params, rm.NextInt())
-		params = append(params, rm.NextInt())
+		one := One{
+			ID:          rm.NextInt(),
+			Name:        rm.NextString(),
+			Description: rm.NextString(),
+			Thumbnail:   rm.NextString(),
+			Price:       rm.NextInt(),
+			Height:      rm.NextInt(),
+			Width:       rm.NextInt(),
+			Depth:       rm.NextInt(),
+			Color:       rm.NextString(),
+			Features:    rm.NextString(),
+			Kind:        rm.NextString(),
+			Popularity:  rm.NextInt(),
+			Stock:       rm.NextInt(),
+		}
+		one.PopularityMinus = one.Popularity * -1
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		vals = append(vals, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+		ones = append(ones, one)
 	}
-	if _, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES"+strings.Join(vals, ","), params...); err != nil {
+	q := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES (:id, :name, :description, :thumbnail, :price, :height, :width, :depth, :color, :features, :kind, :popularity, :popularity_minus, :stock)"
+	if _, err := tx.NamedExec(q, ones); err != nil {
 		c.Logger().Errorf("failed to insert chair: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
