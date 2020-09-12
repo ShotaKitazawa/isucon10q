@@ -35,13 +35,14 @@ CREATE TABLE isuumo.chair
     features    VARCHAR(64)     NOT NULL,
     kind        VARCHAR(64)     NOT NULL,
     popularity  INTEGER         NOT NULL,
-    /*popularity_minus  INTEGER   default NULL,*/
+    popularity_minus  INTEGER   default NULL,
     stock       INTEGER         NOT NULL
 );
 
 ALTER TABLE isuumo.chair add index price_id_index(price,id);
 ALTER TABLE isuumo.estate add index price_id_index(rent,id);
-alter table isuumo.estate add index popularity_minus(popularity_minus, id);
+ALTER table isuumo.chair add index popularity_minus(popularity_minus, id);
+ALTER table isuumo.estate add index popularity_minus(popularity_minus, id);
 
 /* minus.go 用*/
 ALTER TABLE isuumo.estate add index popularity(popularity);
