@@ -858,15 +858,6 @@ func searchEstates(c echo.Context) error {
 			return c.NoContent(http.StatusBadRequest)
 		}
 
-		if estateRent.Min != -1 {
-			conditions = append(conditions, "rent >= ?")
-			params = append(params, estateRent.Min)
-		}
-		if estateRent.Max != -1 {
-			conditions = append(conditions, "rent < ?")
-			params = append(params, estateRent.Max)
-		}
-
 		conditionLength++
 		rentRange = estateRent
 		rentFlag = true
@@ -898,23 +889,24 @@ func searchEstates(c echo.Context) error {
 	var result []Estate
 	for _, estate := range estateStructs {
 		if doorHeightFlag {
-			if !(doorHeightRange.Min <= estate.DoorHeight && estate.DoorHeight < doorHeightRange.Max) {
+			if (doorHeightRange.Max == -1 && estate.DoorHeight < doorHeightRange.Min) || (estate.DoorHeight < doorHeightRange.Min || doorWidthRange.Max <= estate.DoorHeight) {
 				continue
 			}
 		}
 		if doorWidthFlag {
-			if !(doorWidthRange.Min <= estate.DoorWidth && estate.DoorWidth < doorWidthRange.Max) {
+			if (doorWidthRange.Max == -1 && estate.DoorWidth < doorWidthRange.Min) || (estate.DoorWidth < doorWidthRange.Min || doorWidthRange.Max <= estate.DoorWidth) {
 				continue
 			}
 		}
 		if rentFlag {
-			if !(rentRange.Min <= estate.DoorHeight && estate.DoorHeight < rentRange.Max) {
+			if (rentRange.Max == -1 && estate.DoorWidth < rentRange.Min) || (estate.DoorWidth < rentRange.Min || rentRange.Max <= estate.DoorWidth) {
 				continue
 			}
 		}
 		if featuresFlag {
-			for _, f := range strings.Split(estate.Features, ",") {
-				if !contains(features, f) {
+			//for _, f := range strings.Split(estate.Features, ",") {
+			for _, f := range features {
+				if !contains(strings.Split(estate.Features, ","), f) {
 					continue
 				}
 			}
@@ -934,8 +926,10 @@ func searchEstates(c echo.Context) error {
 	var res EstateSearchResponse
 
 	// paging
-	res.Count = int64(len(result))
 	result = result[page*perPage : (page+1)*perPage]
+
+	res.Count = int64(len(result))
+	res.Estates = result
 
 	// searchQuery := "SELECT * FROM estate WHERE "
 	// countQuery := "SELECT COUNT(*) FROM estate WHERE "
@@ -958,8 +952,6 @@ func searchEstates(c echo.Context) error {
 	//	c.Logger().Errorf("searchEstates DB execution error : %v", err)
 	//	return c.NoContent(http.StatusInternalServerError)
 	// }
-
-	res.Estates = result
 
 	return c.JSON(http.StatusOK, res)
 }
