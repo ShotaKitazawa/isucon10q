@@ -623,12 +623,11 @@ func searchChairs(c echo.Context) error {
 		return returnChairs[i].Popularity > returnChairs[j].Popularity
 	})
 
+	var res ChairSearchResponse
+	res.Count = int64(len(returnChairs))
 	// paging
 	returnChairs = returnChairs[page*perPage : (page+1)*perPage]
-	var res ChairSearchResponse
-
 	res.Chairs = returnChairs
-	res.Count = int64(len(returnChairs))
 
 	return c.JSON(http.StatusOK, res)
 }
