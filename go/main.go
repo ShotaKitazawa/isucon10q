@@ -374,49 +374,33 @@ func postChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
-	type One struct {
-		ID              int    `db:"id"`
-		Name            string `db:"name"`
-		Description     string `db:"description"`
-		Thumbnail       string `db:"thumbnail"`
-		Price           int    `db:"price"`
-		Height          int    `db:"height"`
-		Width           int    `db:"width"`
-		Depth           int    `db:"depth"`
-		Color           string `db:"color"`
-		Features        string `db:"features"`
-		Kind            string `db:"kind"`
-		Popularity      int    `db:"popularity"`
-		PopularityMinus int    `db:"popularity_minus"`
-		Stock           int    `db:"stock"`
-	}
-	ones := make([]One, 0, len(records))
+	chairs := make([]*Chair, 0, len(records))
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
-		one := One{
-			ID:          rm.NextInt(),
+		chair := &Chair{
+			ID:          int64(rm.NextInt()),
 			Name:        rm.NextString(),
 			Description: rm.NextString(),
 			Thumbnail:   rm.NextString(),
-			Price:       rm.NextInt(),
-			Height:      rm.NextInt(),
-			Width:       rm.NextInt(),
-			Depth:       rm.NextInt(),
+			Price:       int64(rm.NextInt()),
+			Height:      int64(rm.NextInt()),
+			Width:       int64(rm.NextInt()),
+			Depth:       int64(rm.NextInt()),
 			Color:       rm.NextString(),
 			Features:    rm.NextString(),
 			Kind:        rm.NextString(),
-			Popularity:  rm.NextInt(),
-			Stock:       rm.NextInt(),
+			Popularity:  int64(rm.NextInt()),
+			Stock:       int64(rm.NextInt()),
 		}
-		one.PopularityMinus = one.Popularity * -1
+		chair.PopularityMinus = chair.Popularity * -1
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		ones = append(ones, one)
+		chairs = append(chairs, chair)
 	}
 	q := "INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES (:id, :name, :description, :thumbnail, :price, :height, :width, :depth, :color, :features, :kind, :popularity, :popularity_minus, :stock)"
-	if _, err := tx.NamedExec(q, ones); err != nil {
+	if _, err := tx.NamedExec(q, chairs); err != nil {
 		c.Logger().Errorf("failed to insert chair: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
