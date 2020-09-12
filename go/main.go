@@ -692,19 +692,21 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	c.Echo().Logger.Errorf("Count: %d = %d", countCache, countDB)
+	fmt.Printf("Count: %d = %d\n", countCache, countDB)
 	ccc := countCache
 	if countCache < countDB {
 		ccc = countDB
 	}
 	for i := 0; i < ccc; i++ {
 		if len(chairsCache) > i {
-			c.Echo().Logger.Errorf("V: %#v", chairsCache[i])
+			fmt.Printf("V: %#v\n", chairsCache[i])
 		}
 		if len(chairsDB) > i {
-			c.Echo().Logger.Errorf("V: %#v", chairsDB[i])
+			fmt.Printf("V: %#v\n", chairsDB[i])
 		}
 	}
+	res.Count = int64(countDB)
+	res.Chairs = chairsDB
 
 	return c.JSON(http.StatusOK, res)
 }
