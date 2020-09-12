@@ -29,8 +29,8 @@ const Limit = 20
 const NazotteLimit = 50
 
 var pool = &redis.Pool{
-	MaxIdle:     3,
-	MaxActive:   6,
+	MaxIdle:     10,
+	MaxActive:   20,
 	IdleTimeout: 240 * time.Second,
 	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102") },
 }
