@@ -913,11 +913,11 @@ func searchEstates(c echo.Context) error {
 			}
 		}
 		if featuresFlag {
-		for _, f := range strings.Split(estate.Features, ",") {
-			if !contains(features, f) {
-				continue
+			for _, f := range strings.Split(estate.Features, ",") {
+				if !contains(features, f) {
+					continue
+				}
 			}
-		}
 		}
 
 		result = append(result, estate)
@@ -931,7 +931,10 @@ func searchEstates(c echo.Context) error {
 		return result[i].Popularity > result[j].Popularity
 	})
 
+	var res EstateSearchResponse
+
 	// paging
+	res.Count = int64(len(result))
 	result = result[page*perPage : (page+1)*perPage]
 
 	// searchQuery := "SELECT * FROM estate WHERE "
@@ -939,7 +942,6 @@ func searchEstates(c echo.Context) error {
 	// searchCondition := strings.Join(conditions, " AND ")
 	// limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
 
-	var res EstateSearchResponse
 	// err = db.Get(&res.Count, countQuery+searchCondition, params...)
 	// if err != nil {
 	//	c.Logger().Errorf("searchEstates DB execution error : %v", err)
