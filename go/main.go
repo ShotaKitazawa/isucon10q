@@ -482,6 +482,7 @@ func searchChairs(c echo.Context) error {
 		}
 		chairPrices = chairPrice
 		countCondition++
+		fmt.Println(chairPrices)
 	}
 	if c.QueryParam("heightRangeId") != "" {
 		chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
