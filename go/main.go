@@ -928,9 +928,9 @@ out:
 	var res EstateSearchResponse
 
 	// paging
+	res.Count = int64(len(result))
 	result = result[page*perPage : (page+1)*perPage]
 
-	res.Count = int64(len(result))
 	res.Estates = result
 
 	// searchQuery := "SELECT * FROM estate WHERE "
