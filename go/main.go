@@ -945,15 +945,22 @@ func searchEstateNazotte(c echo.Context) error {
 	b := coordinates.getBoundingBox()
 	estatesInBoundingBox := []Estate{}
 	// 四角形にしてそのなか範囲にある物件取得
-	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
-	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
-	if err == sql.ErrNoRows {
-		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
-		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
-	} else if err != nil {
-		c.Echo().Logger.Errorf("database execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
+	for i := range estateMap {
+		if estateMap[i].Latitude <= b.BottomRightCorner.Latitude && estateMap[i].Latitude >= b.TopLeftCorner.Latitude &&
+			estateMap[i].Longitude >= b.BottomRightCorner.Longitude && estateMap[i].Longitude >= b.TopLeftCorner.Longitude {
+			estatesInBoundingBox = append(estatesInBoundingBox, estateMap[i])
+		}
 	}
+	/*
+		query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
+		err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
+	*/
+	sort.Slice(estatesInBoundingBox, func(i, j int) bool {
+		if estatesInBoundingBox[i].Popularity == estatesInBoundingBox[j].Popularity {
+			return estatesInBoundingBox[i].ID < estatesInBoundingBox[j].ID
+		}
+		return estatesInBoundingBox[i].Popularity > estatesInBoundingBox[j].Popularity
+	})
 
 	estatesInPolygon := []Estate{}
 	for _, estate := range estatesInBoundingBox {
@@ -966,22 +973,6 @@ func searchEstateNazotte(c echo.Context) error {
 			validatedEstate = estate
 			estatesInPolygon = append(estatesInPolygon, validatedEstate)
 		}
-		/*
-			// TODO: N+1
-			point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
-			query := fmt.Sprintf(`SELECT * FROM estate WHERE id = ? AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(%s))`, coordinates.coordinatesToText(), point)
-			err = db.Get(&validatedEstate, query, estate.ID)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					continue
-				} else {
-					c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
-					return c.NoContent(http.StatusInternalServerError)
-				}
-			} else {
-				estatesInPolygon = append(estatesInPolygon, validatedEstate)
-			}
-		*/
 	}
 
 	var re EstateSearchResponse
