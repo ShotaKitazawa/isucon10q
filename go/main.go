@@ -313,11 +313,6 @@ func initialize(c echo.Context) error {
 		}
 	}
 
-	if err := exec.Command("bash", "-c", filepath.Join(sqlDir, "minus", "tmp")).Run(); err != nil {
-		c.Logger().Errorf("Initialize minus script error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
 	})
