@@ -574,8 +574,17 @@ func searchChairs(c echo.Context) error {
 		}
 		return chairs[i].Popularity > chairs[j].Popularity
 	})
-	res.Count = int64(len(chairs))
+	count := len(chairs)
+	res.Count = int64(count)
 	res.Chairs = chairs[page*perPage : page*perPage+perPage]
+
+	if (page+1)*perPage < count {
+		chairs = chairs[page*perPage : (page+1)*perPage]
+	} else {
+		mod := count % perPage
+		chairs = chairs[page*perPage : (page)*perPage+mod]
+	}
+	res.Chairs = chairs
 
 	return c.JSON(http.StatusOK, res)
 }
@@ -761,68 +770,96 @@ func postEstate(c echo.Context) error {
 }
 
 func searchEstates(c echo.Context) error {
-	conditions := make([]string, 0)
-	params := make([]interface{}, 0)
+	var consCount int
+	estates := []Estate{}
 
-	if c.QueryParam("doorHeightRangeId") != "" {
-		doorHeight, err := getRange(estateSearchCondition.DoorHeight, c.QueryParam("doorHeightRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("doorHeightRangeID invalid, %v : %v", c.QueryParam("doorHeightRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
+	for _, estate := range estates {
+		if c.QueryParam("doorHeightRangeId") != "" {
+			doorHeight, err := getRange(estateSearchCondition.DoorHeight, c.QueryParam("doorHeightRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("doorHeightRangeID invalid, %v : %v", c.QueryParam("doorHeightRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if doorHeight.Min != -1 {
+				consCount++
+				if estate.DoorHeight < doorHeight.Min {
+					continue
+				}
+			}
+			if doorHeight.Max != -1 {
+				consCount++
+				if estate.DoorHeight > doorHeight.Max {
+					continue
+				}
+			}
 		}
 
-		if doorHeight.Min != -1 {
-			conditions = append(conditions, "door_height >= ?")
-			params = append(params, doorHeight.Min)
+		if c.QueryParam("doorWidthRangeId") != "" {
+			doorWidth, err := getRange(estateSearchCondition.DoorWidth, c.QueryParam("doorWidthRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("doorWidthRangeID invalid, %v : %v", c.QueryParam("doorWidthRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if doorWidth.Min != -1 {
+				consCount++
+				if estate.DoorWidth < doorWidth.Min {
+					continue
+				}
+			}
+			if doorWidth.Max != -1 {
+				consCount++
+				if estate.DoorWidth > doorWidth.Max {
+					continue
+				}
+			}
 		}
-		if doorHeight.Max != -1 {
-			conditions = append(conditions, "door_height < ?")
-			params = append(params, doorHeight.Max)
+
+		if c.QueryParam("rentRangeId") != "" {
+			estateRent, err := getRange(estateSearchCondition.Rent, c.QueryParam("rentRangeId"))
+			if err != nil {
+				c.Echo().Logger.Infof("rentRangeID invalid, %v : %v", c.QueryParam("rentRangeId"), err)
+				return c.NoContent(http.StatusBadRequest)
+			}
+
+			if estateRent.Min != -1 {
+				consCount++
+				if estate.Rent < estateRent.Min {
+					continue
+				}
+			}
+			if estateRent.Max != -1 {
+				consCount++
+				if estate.Rent > estateRent.Max {
+					continue
+				}
+			}
 		}
+
+		if c.QueryParam("features") != "" {
+			isMatched := true
+			for _, f := range strings.Split(c.QueryParam("features"), ",") {
+				var mm bool
+				for _, ff := range strings.Split(estate.Features, ",") {
+					if f == ff {
+						mm = true
+					}
+				}
+				consCount++
+				if !mm {
+					isMatched = false
+				}
+			}
+			if !isMatched {
+				continue
+			}
+		}
+
+		estates = append(estates, estate)
 	}
 
-	if c.QueryParam("doorWidthRangeId") != "" {
-		doorWidth, err := getRange(estateSearchCondition.DoorWidth, c.QueryParam("doorWidthRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("doorWidthRangeID invalid, %v : %v", c.QueryParam("doorWidthRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if doorWidth.Min != -1 {
-			conditions = append(conditions, "door_width >= ?")
-			params = append(params, doorWidth.Min)
-		}
-		if doorWidth.Max != -1 {
-			conditions = append(conditions, "door_width < ?")
-			params = append(params, doorWidth.Max)
-		}
-	}
-
-	if c.QueryParam("rentRangeId") != "" {
-		estateRent, err := getRange(estateSearchCondition.Rent, c.QueryParam("rentRangeId"))
-		if err != nil {
-			c.Echo().Logger.Infof("rentRangeID invalid, %v : %v", c.QueryParam("rentRangeId"), err)
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		if estateRent.Min != -1 {
-			conditions = append(conditions, "rent >= ?")
-			params = append(params, estateRent.Min)
-		}
-		if estateRent.Max != -1 {
-			conditions = append(conditions, "rent < ?")
-			params = append(params, estateRent.Max)
-		}
-	}
-
-	if c.QueryParam("features") != "" {
-		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', ?, '%')")
-			params = append(params, f)
-		}
-	}
-
-	if len(conditions) == 0 {
+	if consCount == 0 {
 		c.Echo().Logger.Infof("searchEstates search condition not found")
 		return c.NoContent(http.StatusBadRequest)
 	}
@@ -839,29 +876,24 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := "SELECT * FROM estate WHERE "
-	countQuery := "SELECT COUNT(*) FROM estate WHERE "
-	searchCondition := strings.Join(conditions, " AND ")
-	limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
-
 	var res EstateSearchResponse
-	err = db.Get(&res.Count, countQuery+searchCondition, params...)
-	if err != nil {
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
 
-	estates := []Estate{}
-	params = append(params, perPage, page*perPage)
-	err = db.Select(&estates, searchQuery+searchCondition+limitOffset, params...)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+	sort.Slice(estates, func(i, j int) bool {
+		if estates[i].Popularity == estates[j].Popularity {
+			return estates[i].ID < estates[j].ID
 		}
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+		return estates[i].Popularity > estates[j].Popularity
+	})
+	count := len(estates)
+	res.Count = int64(count)
+	res.Estates = estates
 
+	if (page+1)*perPage < count {
+		estates = estates[page*perPage : (page+1)*perPage]
+	} else {
+		mod := count % perPage
+		estates = estates[page*perPage : (page)*perPage+mod]
+	}
 	res.Estates = estates
 
 	return c.JSON(http.StatusOK, res)
