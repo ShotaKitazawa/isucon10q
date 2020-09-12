@@ -375,7 +375,7 @@ func postChair(c echo.Context) error {
 	}
 	defer tx.Rollback()
 	params := []interface{}{}
-	var valStr string
+	vals := make([]string, 0, len(records))
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
 		params = append(params, rm.NextInt())
@@ -395,9 +395,9 @@ func postChair(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		valStr += "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		vals = append(vals, "(?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	}
-	if _, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES"+valStr, params...); err != nil {
+	if _, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES"+strings.Join(vals, ","), params...); err != nil {
 		c.Logger().Errorf("failed to insert chair: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
