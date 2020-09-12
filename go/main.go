@@ -553,9 +553,7 @@ func searchChairs(c echo.Context) error {
 		if chairPrices.ID != -1 && chairPrices.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			fmt.Println(chairPrices, chairStructs[i].Price)
-			if chairPrices.Min > chairStructs[i].Price || chairStructs[i].Price <= chairPrices.Max {
-				fmt.Println("スルー")
+			if chairPrices.Min > chairStructs[i].Price || chairStructs[i].Price >= chairPrices.Max {
 				continue
 			}
 		} else {
@@ -565,11 +563,10 @@ func searchChairs(c echo.Context) error {
 				}
 			}
 		}
-		fmt.Println("通る")
 		if chairHeights.ID != -1 && chairHeights.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairHeights.Min > chairStructs[i].Height || chairStructs[i].Height <= chairHeights.Max {
+			if chairHeights.Min > chairStructs[i].Height || chairStructs[i].Height >= chairHeights.Max {
 				continue
 			}
 		} else {
@@ -580,7 +577,7 @@ func searchChairs(c echo.Context) error {
 		if chairWidths.ID != -1 && chairWidths.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairWidths.Min > chairStructs[i].Width || chairStructs[i].Width <= chairWidths.Max {
+			if chairWidths.Min > chairStructs[i].Width || chairStructs[i].Width >= chairWidths.Max {
 				continue
 			}
 		} else {
@@ -591,7 +588,7 @@ func searchChairs(c echo.Context) error {
 		if chairDepths.ID != -1 && chairDepths.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairDepths.Min > chairStructs[i].Depth || chairStructs[i].Depth <= chairDepths.Max {
+			if chairDepths.Min > chairStructs[i].Depth || chairStructs[i].Depth >= chairDepths.Max {
 				continue
 			}
 		} else {
