@@ -241,6 +241,17 @@ func init() {
 		os.Exit(1)
 	}
 	json.Unmarshal(jsonText, &estateSearchCondition)
+
+	mySQLConnectionData = NewMySQLConnectionEnv()
+	db, err = mySQLConnectionData.ConnectDB()
+	if err != nil {
+		panic(err)
+		//e.Logger.Fatalf("DB connection failed : %v", err)
+	}
+	db.SetMaxOpenConns(10)
+
+	initEstate()
+
 }
 
 func main() {
@@ -276,14 +287,6 @@ func main() {
 	e.GET("/api/estate/search/condition", getEstateSearchCondition)
 	e.GET("/api/recommended_estate/:id", searchRecommendedEstateWithChair)
 
-	mySQLConnectionData = NewMySQLConnectionEnv()
-
-	var err error
-	db, err = mySQLConnectionData.ConnectDB()
-	if err != nil {
-		e.Logger.Fatalf("DB connection failed : %v", err)
-	}
-	db.SetMaxOpenConns(10)
 	defer db.Close()
 
 	// Start server
