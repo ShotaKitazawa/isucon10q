@@ -889,7 +889,7 @@ func searchEstates(c echo.Context) error {
 	var result []Estate
 
 out:
-	for _, estate := range estateStructs {
+	for _, estate := range estateMap {
 		if doorHeightFlag {
 			if (doorHeightRange.Max == -1 && estate.DoorHeight < doorHeightRange.Min) || (estate.DoorHeight < doorHeightRange.Min || doorWidthRange.Max <= estate.DoorHeight) {
 				continue
