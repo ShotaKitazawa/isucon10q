@@ -30,7 +30,9 @@ func initCache() {
 			panic(err)
 		}
 		c := pool.Get()
-		c.Do("SET", "estate_"+strconv.Itoa(int(estate.ID)), data)
+		if _, err := c.Do("SET", "estate_"+strconv.Itoa(int(estate.ID)), data); err != nil {
+			panic(err)
+		}
 		c.Close()
 	}
 	for _, chair := range chairStructs {
@@ -39,7 +41,9 @@ func initCache() {
 			panic(err)
 		}
 		c := pool.Get()
-		c.Do("SET", "chair_"+strconv.Itoa(int(chair.ID)), data)
+		if _, err := c.Do("SET", "chair_"+strconv.Itoa(int(chair.ID)), data); err != nil {
+			panic(err)
+		}
 		c.Close()
 	}
 }
