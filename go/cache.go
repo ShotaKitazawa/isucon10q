@@ -8,8 +8,8 @@ var chairMap map[int64]Chair
 var chairLock sync.Mutex
 
 func initCache() {
-	estateMap = make(map[int64]Estate, 100000)
-	chairMap = make(map[int64]Chair, 100000)
+	estateMap = make(map[int64]Estate)
+	chairMap = make(map[int64]Chair)
 
 	var estateStructs []Estate
 	var chairStructs []Chair
