@@ -480,9 +480,10 @@ func searchChairs(c echo.Context) error {
 			c.Echo().Logger.Infof("priceRangeID invalid, %v : %v", c.QueryParam("priceRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		chairPrices = chairPrice
+		chairPrices.ID = chairPrice.ID
+		chairPrices.Max = chairPrice.Max
+		chairPrices.Min = chairPrice.Min
 		countCondition++
-		fmt.Println(chairPrices)
 	}
 	if c.QueryParam("heightRangeId") != "" {
 		chairHeight, err := getRange(chairSearchCondition.Height, c.QueryParam("heightRangeId"))
