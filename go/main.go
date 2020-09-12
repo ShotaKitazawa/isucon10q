@@ -554,6 +554,18 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil {
+		c.Logger().Infof("Invalid format page parameter : %v", err)
+		return c.NoContent(http.StatusBadRequest)
+	}
+
+	perPage, err := strconv.Atoi(c.QueryParam("perPage"))
+	if err != nil {
+		c.Logger().Infof("Invalid format perPage parameter : %v", err)
+		return c.NoContent(http.StatusBadRequest)
+	}
+
 	var res ChairSearchResponse
 
 	sort.Slice(chairs, func(i, j int) bool {
@@ -563,7 +575,7 @@ func searchChairs(c echo.Context) error {
 		return chairs[i].Popularity > chairs[j].Popularity
 	})
 	res.Count = int64(len(chairs))
-	res.Chairs = chairs
+	res.Chairs = chairs[page*perPage : page*perPage+perPage]
 
 	return c.JSON(http.StatusOK, res)
 }
