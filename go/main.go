@@ -491,7 +491,9 @@ func searchChairs(c echo.Context) error {
 			c.Echo().Logger.Infof("heightRangeIf invalid, %v : %v", c.QueryParam("heightRangeId"), err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		chairHeights = chairHeight
+		chairHeights.ID = chairHeight.ID
+		chairHeights.Max = chairHeight.Max
+		chairHeights.Min = chairHeight.Min
 		countCondition++
 	}
 	if c.QueryParam("widthRangeId") != "" {
@@ -555,8 +557,10 @@ func searchChairs(c echo.Context) error {
 				continue
 			}
 		} else {
-			if chairPrices.ID != -1 && chairPrices.Min > chairStructs[i].Price {
-				continue
+			if chairPrices.ID != -1 {
+				if chairPrices.Min > chairStructs[i].Price {
+					continue
+				}
 			}
 		}
 		if chairHeights.ID != -1 && chairHeights.Max != -1 {
