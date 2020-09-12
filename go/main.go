@@ -34,19 +34,20 @@ type InitializeResponse struct {
 }
 
 type Chair struct {
-	ID          int64  `db:"id" json:"id"`
-	Name        string `db:"name" json:"name"`
-	Description string `db:"description" json:"description"`
-	Thumbnail   string `db:"thumbnail" json:"thumbnail"`
-	Price       int64  `db:"price" json:"price"`
-	Height      int64  `db:"height" json:"height"`
-	Width       int64  `db:"width" json:"width"`
-	Depth       int64  `db:"depth" json:"depth"`
-	Color       string `db:"color" json:"color"`
-	Features    string `db:"features" json:"features"`
-	Kind        string `db:"kind" json:"kind"`
-	Popularity  int64  `db:"popularity" json:"-"`
-	Stock       int64  `db:"stock" json:"-"`
+	ID              int64  `db:"id" json:"id"`
+	Name            string `db:"name" json:"name"`
+	Description     string `db:"description" json:"description"`
+	Thumbnail       string `db:"thumbnail" json:"thumbnail"`
+	Price           int64  `db:"price" json:"price"`
+	Height          int64  `db:"height" json:"height"`
+	Width           int64  `db:"width" json:"width"`
+	Depth           int64  `db:"depth" json:"depth"`
+	Color           string `db:"color" json:"color"`
+	Features        string `db:"features" json:"features"`
+	Kind            string `db:"kind" json:"kind"`
+	Popularity      int64  `db:"popularity" json:"-"`
+	Stock           int64  `db:"stock" json:"-"`
+	PopularityMinus int64  `db:"popularity_minus" json:"-"`
 }
 
 type ChairSearchResponse struct {
@@ -60,18 +61,19 @@ type ChairListResponse struct {
 
 //Estate 物件
 type Estate struct {
-	ID          int64   `db:"id" json:"id"`
-	Thumbnail   string  `db:"thumbnail" json:"thumbnail"`
-	Name        string  `db:"name" json:"name"`
-	Description string  `db:"description" json:"description"`
-	Latitude    float64 `db:"latitude" json:"latitude"`
-	Longitude   float64 `db:"longitude" json:"longitude"`
-	Address     string  `db:"address" json:"address"`
-	Rent        int64   `db:"rent" json:"rent"`
-	DoorHeight  int64   `db:"door_height" json:"doorHeight"`
-	DoorWidth   int64   `db:"door_width" json:"doorWidth"`
-	Features    string  `db:"features" json:"features"`
-	Popularity  int64   `db:"popularity" json:"-"`
+	ID              int64   `db:"id" json:"id"`
+	Thumbnail       string  `db:"thumbnail" json:"thumbnail"`
+	Name            string  `db:"name" json:"name"`
+	Description     string  `db:"description" json:"description"`
+	Latitude        float64 `db:"latitude" json:"latitude"`
+	Longitude       float64 `db:"longitude" json:"longitude"`
+	Address         string  `db:"address" json:"address"`
+	Rent            int64   `db:"rent" json:"rent"`
+	DoorHeight      int64   `db:"door_height" json:"doorHeight"`
+	DoorWidth       int64   `db:"door_width" json:"doorWidth"`
+	Features        string  `db:"features" json:"features"`
+	Popularity      int64   `db:"popularity" json:"-"`
+	PopularityMinus int64   `db:"popularity_minus" json:"-"`
 }
 
 //EstateSearchResponse estate/searchへのレスポンスの形式
@@ -384,7 +386,8 @@ func postChair(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock)
+		//_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, stock)
+		_, err := tx.Exec("INSERT INTO chair(id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity_minus,stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, price, height, width, depth, color, features, kind, popularity, popularity*-1, stock)
 		if err != nil {
 			c.Logger().Errorf("failed to insert chair: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -508,7 +511,7 @@ func searchChairs(c echo.Context) error {
 	searchQuery := "SELECT * FROM chair WHERE "
 	countQuery := "SELECT COUNT(*) FROM chair WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
-	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
+	limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
 
 	var res ChairSearchResponse
 	err = db.Get(&res.Count, countQuery+searchCondition, params...)
@@ -681,7 +684,8 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+		//_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
+		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity, popularity_minus) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity, popularity*-1)
 		if err != nil {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
@@ -776,7 +780,7 @@ func searchEstates(c echo.Context) error {
 	searchQuery := "SELECT * FROM estate WHERE "
 	countQuery := "SELECT COUNT(*) FROM estate WHERE "
 	searchCondition := strings.Join(conditions, " AND ")
-	limitOffset := " ORDER BY popularity DESC, id ASC LIMIT ? OFFSET ?"
+	limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
 
 	var res EstateSearchResponse
 	err = db.Get(&res.Count, countQuery+searchCondition, params...)
@@ -840,7 +844,7 @@ func searchRecommendedEstateWithChair(c echo.Context) error {
 	w := chair.Width
 	h := chair.Height
 	d := chair.Depth
-	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity DESC, id ASC LIMIT ?`
+	query = `SELECT * FROM estate WHERE (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) OR (door_width >= ? AND door_height >= ?) ORDER BY popularity_minus ASC, id ASC LIMIT ?`
 	err = db.Select(&estates, query, w, h, w, d, h, w, h, d, d, w, d, h, Limit)
 	if err != nil {
 		if err == sql.ErrNoRows {
