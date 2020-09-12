@@ -17,18 +17,21 @@ func main() {
 	var popularities []struct {
 		Popularity int64 `db:"popularity"`
 	}
-	db.Select(&popularities, `SELECT popularity FROM estate`)
 
-	// 重複排除
-	m := make(map[int64]struct{})
-	for _, popularity := range popularities {
-		m[popularity.Popularity] = struct{}{}
-	}
+	for _, table := range []string{"estate", "chair"} {
+		db.Select(&popularities, fmt.Sprintf(`SELECT popularity FROM %s`, table))
 
-	for popularity, _ := range m {
-		if _, err := db.Exec(`UPDATE estate SET popularity_minus = ? WHERE popularity = ?`, popularity*-1, popularity); err != nil {
-			panic(err)
+		// 重複排除
+		m := make(map[int64]struct{})
+		for _, popularity := range popularities {
+			m[popularity.Popularity] = struct{}{}
 		}
-	}
 
+		for popularity, _ := range m {
+			if _, err := db.Exec(fmt.Sprintf(`UPDATE %s SET popularity_minus = ? WHERE popularity = ?`, table), popularity*-1, popularity); err != nil {
+				panic(err)
+			}
+		}
+
+	}
 }
