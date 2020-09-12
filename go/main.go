@@ -31,8 +31,19 @@ var chairSearchCondition ChairSearchCondition
 var estateSearchCondition EstateSearchCondition
 
 var (
-	uaRegList = []*regexp.Regexp{}
-	uaPre     = []string{
+	uaReg = []*regexp.Regexp{
+		regexp.MustCompile(`ISUCONbot(-Mobile)?`),
+		regexp.MustCompile(`ISUCONbot-Image\/`),
+		regexp.MustCompile(`Mediapartners-ISUCON`),
+		regexp.MustCompile(`ISUCONCoffee`),
+		regexp.MustCompile(`ISUCONFeedSeeker(Beta)?`),
+		regexp.MustCompile(`crawler \(https:\/\/isucon\.invalid\/(support\/faq\/|help\/jp\/)`),
+		regexp.MustCompile(`isubot`),
+		regexp.MustCompile(`Isupider`),
+		regexp.MustCompile(`Isupider(-image)?\+`),
+		regexp.MustCompile(`(bot|crawler|spider)(?:[-_ .\/;@()]|$)`),
+	}
+	uaPre = []string{
 		"ISUCON",
 		"Mediapartners-ISUCON",
 	}
@@ -43,16 +54,21 @@ var (
 )
 
 func checkUserAgent(ua string) bool {
-	for _, v := range uaPre {
-		if strings.HasPrefix(ua, v) {
+	for _, v := range uaReg {
+		if v.MatchString(ua) {
 			return false
 		}
 	}
-	for _, v := range uaSuf {
-		if strings.HasSuffix(ua, v) {
-			return false
-		}
-	}
+	//for _, v := range uaPre {
+	//	if strings.HasPrefix(ua, v) {
+	//		return false
+	//	}
+	//}
+	//for _, v := range uaSuf {
+	//	if strings.HasSuffix(ua, v) {
+	//		return false
+	//	}
+	//}
 	return true
 }
 
