@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"io/ioutil"
 	"net/http"
@@ -63,19 +64,22 @@ type ChairListResponse struct {
 
 //Estate 物件
 type Estate struct {
-	ID              int64   `db:"id" json:"id"`
-	Thumbnail       string  `db:"thumbnail" json:"thumbnail"`
-	Name            string  `db:"name" json:"name"`
-	Description     string  `db:"description" json:"description"`
-	Latitude        float64 `db:"latitude" json:"latitude"`
-	Longitude       float64 `db:"longitude" json:"longitude"`
-	Address         string  `db:"address" json:"address"`
-	Rent            int64   `db:"rent" json:"rent"`
-	DoorHeight      int64   `db:"door_height" json:"doorHeight"`
-	DoorWidth       int64   `db:"door_width" json:"doorWidth"`
-	Features        string  `db:"features" json:"features"`
-	Popularity      int64   `db:"popularity" json:"-"`
-	PopularityMinus int64   `db:"popularity_minus" json:"-"`
+	ID          int64   `db:"id" json:"id"`
+	Thumbnail   string  `db:"thumbnail" json:"thumbnail"`
+	Name        string  `db:"name" json:"name"`
+	Description string  `db:"description" json:"description"`
+	Latitude    float64 `db:"latitude" json:"latitude"`
+	Longitude   float64 `db:"longitude" json:"longitude"`
+	Address     string  `db:"address" json:"address"`
+	Rent        int64   `db:"rent" json:"rent"`
+	// RentRangeId       int     `db:"-" json:"-"`
+	DoorHeight int64 `db:"door_height" json:"doorHeight"`
+	// DoorHeightRangeId int     `db:"-" json:"-"`
+	DoorWidth int64 `db:"door_width" json:"doorWidth"`
+	// DoorWidthRangeId  int     `db:"-" json:"-"`
+	Features        string `db:"features" json:"features"`
+	Popularity      int64  `db:"popularity" json:"-"`
+	PopularityMinus int64  `db:"popularity_minus" json:"-"`
 }
 
 //EstateSearchResponse estate/searchへのレスポンスの形式
@@ -769,6 +773,9 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
+
+		// TODO RangeId も初期化する
+
 		estateLock.Lock()
 		estateMap[int64(id)] = Estate{
 			ID:          int64(id),
@@ -795,6 +802,13 @@ func searchEstates(c echo.Context) error {
 	conditions := make([]string, 0)
 	params := make([]interface{}, 0)
 
+	// var doorHeightRangeId, doorWidthRangeId, rentRangeId, conditionLength int
+	var conditionLength int
+	var doorHeightRange, doorWidthRange, rentRange *Range
+	var features []string
+	var doorHeightFlag, doorWidthFlag, rentFlag, featuresFlag bool
+	var err error
+
 	if c.QueryParam("doorHeightRangeId") != "" {
 		doorHeight, err := getRange(estateSearchCondition.DoorHeight, c.QueryParam("doorHeightRangeId"))
 		if err != nil {
@@ -810,6 +824,10 @@ func searchEstates(c echo.Context) error {
 			conditions = append(conditions, "door_height < ?")
 			params = append(params, doorHeight.Max)
 		}
+
+		conditionLength++
+		doorHeightRange = doorHeight
+		doorHeightFlag = true
 	}
 
 	if c.QueryParam("doorWidthRangeId") != "" {
@@ -827,6 +845,10 @@ func searchEstates(c echo.Context) error {
 			conditions = append(conditions, "door_width < ?")
 			params = append(params, doorWidth.Max)
 		}
+
+		conditionLength++
+		doorWidthRange = doorWidth
+		doorWidthFlag = true
 	}
 
 	if c.QueryParam("rentRangeId") != "" {
@@ -844,16 +866,19 @@ func searchEstates(c echo.Context) error {
 			conditions = append(conditions, "rent < ?")
 			params = append(params, estateRent.Max)
 		}
+
+		conditionLength++
+		rentRange = estateRent
+		rentFlag = true
 	}
 
 	if c.QueryParam("features") != "" {
-		for _, f := range strings.Split(c.QueryParam("features"), ",") {
-			conditions = append(conditions, "features like concat('%', ?, '%')")
-			params = append(params, f)
-		}
+		features = strings.Split(c.QueryParam("features"), ",")
+		conditionLength++
+		featuresFlag = true
 	}
 
-	if len(conditions) == 0 {
+	if conditionLength == 0 {
 		c.Echo().Logger.Infof("searchEstates search condition not found")
 		return c.NoContent(http.StatusBadRequest)
 	}
@@ -870,30 +895,69 @@ func searchEstates(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	searchQuery := "SELECT * FROM estate WHERE "
-	countQuery := "SELECT COUNT(*) FROM estate WHERE "
-	searchCondition := strings.Join(conditions, " AND ")
-	limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
+	var result []Estate
+	for _, estate := range estateStructs {
+		if doorHeightFlag {
+			if !(doorHeightRange.Min <= estate.DoorHeight && estate.DoorHeight < doorHeightRange.Max) {
+				continue
+			}
+		}
+		if doorWidthFlag {
+			if !(doorWidthRange.Min <= estate.DoorWidth && estate.DoorWidth < doorWidthRange.Max) {
+				continue
+			}
+		}
+		if rentFlag {
+			if !(rentRange.Min <= estate.DoorHeight && estate.DoorHeight < rentRange.Max) {
+				continue
+			}
+		}
+		if featuresFlag {
+		for _, f := range strings.Split(estate.Features, ",") {
+			if !contains(features, f) {
+				continue
+			}
+		}
+		}
+
+		result = append(result, estate)
+	}
+
+	// ORDER BY popularity ASC, id ASC LIMIT ? OFFSET ?"
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID < result[j].ID
+	})
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Popularity > result[j].Popularity
+	})
+
+	// paging
+	result = result[page*perPage : (page+1)*perPage]
+
+	// searchQuery := "SELECT * FROM estate WHERE "
+	// countQuery := "SELECT COUNT(*) FROM estate WHERE "
+	// searchCondition := strings.Join(conditions, " AND ")
+	// limitOffset := " ORDER BY popularity_minus ASC, id ASC LIMIT ? OFFSET ?"
 
 	var res EstateSearchResponse
-	err = db.Get(&res.Count, countQuery+searchCondition, params...)
-	if err != nil {
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// err = db.Get(&res.Count, countQuery+searchCondition, params...)
+	// if err != nil {
+	//	c.Logger().Errorf("searchEstates DB execution error : %v", err)
+	//	return c.NoContent(http.StatusInternalServerError)
+	// }
 
-	estates := []Estate{}
-	params = append(params, perPage, page*perPage)
-	err = db.Select(&estates, searchQuery+searchCondition+limitOffset, params...)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
-		}
-		c.Logger().Errorf("searchEstates DB execution error : %v", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
+	// estates := []Estate{}
+	// params = append(params, perPage, page*perPage)
+	// err = db.Select(&estates, searchQuery+searchCondition+limitOffset, params...)
+	// if err != nil {
+	//	if err == sql.ErrNoRows {
+	//		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+	//	}
+	//	c.Logger().Errorf("searchEstates DB execution error : %v", err)
+	//	return c.NoContent(http.StatusInternalServerError)
+	// }
 
-	res.Estates = estates
+	res.Estates = result
 
 	return c.JSON(http.StatusOK, res)
 }
