@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -239,6 +240,8 @@ func init() {
 }
 
 func main() {
+	go http.ListenAndServe(":3000", nil)
+
 	// Echo instance
 	e := echo.New()
 	e.Debug = true
