@@ -41,3 +41,4 @@ CREATE TABLE isuumo.chair
 
 ALTER TABLE isuumo.chair add index price_id_index(price,id);
 ALTER TABLE isuumo.estate add index price_id_index(rent,id);
+ALTER TABLE isuumo.estate add index popularity(popularity);

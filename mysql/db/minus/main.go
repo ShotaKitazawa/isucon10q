@@ -19,8 +19,14 @@ func main() {
 	}
 	db.Select(&popularities, `SELECT popularity FROM estate`)
 
+	// 重複排除
+	m := make(map[int64]struct{})
 	for _, popularity := range popularities {
-		if _, err := db.Exec(`UPDATE estate SET popularity_minus = ? WHERE popularity = ?`, popularity.Popularity*-1, popularity.Popularity); err != nil {
+		m[popularity.Popularity] = struct{}{}
+	}
+
+	for popularity, _ := range m {
+		if _, err := db.Exec(`UPDATE estate SET popularity_minus = ? WHERE popularity = ?`, popularity*-1, popularity); err != nil {
 			panic(err)
 		}
 	}
