@@ -241,6 +241,16 @@ func init() {
 		os.Exit(1)
 	}
 	json.Unmarshal(jsonText, &estateSearchCondition)
+
+	mySQLConnectionData = NewMySQLConnectionEnv()
+	db, err = mySQLConnectionData.ConnectDB()
+	if err != nil {
+		panic(err)
+		//e.Logger.Fatalf("DB connection failed : %v", err)
+	}
+	db.SetMaxOpenConns(10)
+
+	initCache()
 }
 
 func main() {
@@ -276,14 +286,6 @@ func main() {
 	e.GET("/api/estate/search/condition", getEstateSearchCondition)
 	e.GET("/api/recommended_estate/:id", searchRecommendedEstateWithChair)
 
-	mySQLConnectionData = NewMySQLConnectionEnv()
-
-	var err error
-	db, err = mySQLConnectionData.ConnectDB()
-	if err != nil {
-		e.Logger.Fatalf("DB connection failed : %v", err)
-	}
-	db.SetMaxOpenConns(10)
 	defer db.Close()
 
 	// Start server
@@ -292,6 +294,7 @@ func main() {
 }
 
 func initialize(c echo.Context) error {
+
 	sqlDir := filepath.Join("..", "mysql", "db")
 	paths := []string{
 		filepath.Join(sqlDir, "0_Schema.sql"),
@@ -314,6 +317,8 @@ func initialize(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
+
+	initCache()
 
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
@@ -399,6 +404,46 @@ func postChair(c echo.Context) error {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	// update cache
+	for _, row := range records {
+		rm := RecordMapper{Record: row}
+		id := rm.NextInt()
+		name := rm.NextString()
+		description := rm.NextString()
+		thumbnail := rm.NextString()
+		price := rm.NextInt()
+		height := rm.NextInt()
+		width := rm.NextInt()
+		depth := rm.NextInt()
+		color := rm.NextString()
+		features := rm.NextString()
+		kind := rm.NextString()
+		popularity := rm.NextInt()
+		stock := rm.NextInt()
+		if err := rm.Err(); err != nil {
+			c.Logger().Errorf("failed to read record: %v", err)
+			return c.NoContent(http.StatusBadRequest)
+		}
+		chairLock.Lock()
+		chairMap[int64(id)] = Chair{
+			ID:          int64(id),
+			Name:        name,
+			Description: description,
+			Thumbnail:   thumbnail,
+			Price:       int64(price),
+			Height:      int64(height),
+			Width:       int64(width),
+			Depth:       int64(depth),
+			Color:       color,
+			Features:    features,
+			Kind:        kind,
+			Popularity:  int64(popularity),
+			Stock:       int64(stock),
+		}
+		chairLock.Unlock()
+	}
+
 	return c.NoContent(http.StatusCreated)
 }
 
@@ -587,6 +632,12 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
+	chairLock.Lock()
+	tmp := chairMap[int64(id)]
+	tmp.Stock--
+	chairMap[int64(id)] = tmp
+	chairLock.Unlock()
+
 	return c.NoContent(http.StatusOK)
 }
 
@@ -692,11 +743,51 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+
 	}
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
+	// update cache
+	for _, row := range records {
+		rm := RecordMapper{Record: row}
+		id := rm.NextInt()
+		name := rm.NextString()
+		description := rm.NextString()
+		thumbnail := rm.NextString()
+		address := rm.NextString()
+		latitude := rm.NextFloat()
+		longitude := rm.NextFloat()
+		rent := rm.NextInt()
+		doorHeight := rm.NextInt()
+		doorWidth := rm.NextInt()
+		features := rm.NextString()
+		popularity := rm.NextInt()
+		if err := rm.Err(); err != nil {
+			c.Logger().Errorf("failed to read record: %v", err)
+			return c.NoContent(http.StatusBadRequest)
+		}
+		estateLock.Lock()
+		estateMap[int64(id)] = Estate{
+			ID:          int64(id),
+			Name:        name,
+			Description: description,
+			Thumbnail:   thumbnail,
+			Address:     address,
+			Latitude:    latitude,
+			Longitude:   longitude,
+			Rent:        int64(rent),
+			DoorHeight:  int64(doorHeight),
+			DoorWidth:   int64(doorWidth),
+			Features:    features,
+			Popularity:  int64(popularity),
+		}
+		estateLock.Unlock()
+
+	}
+
 	return c.NoContent(http.StatusCreated)
 }
 
