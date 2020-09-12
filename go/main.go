@@ -655,7 +655,7 @@ func searchChairs(c echo.Context) error {
 	//}
 
 	var res ChairSearchResponse
-	chairsCache := []Chair{}
+	//chairsCache := []Chair{}
 	//countCache := len(chairs)
 
 	sort.Slice(chairs, func(i, j int) bool {
