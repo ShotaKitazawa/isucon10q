@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
@@ -16,6 +17,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	geo "github.com/kellydunn/golang-geo"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
@@ -869,8 +871,10 @@ func searchEstateNazotte(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	// 囲った線から緯度経度の右上右下左上左下を持ってくる
 	b := coordinates.getBoundingBox()
 	estatesInBoundingBox := []Estate{}
+	// 四角形にしてそのなか範囲にある物件取得
 	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
 	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	if err == sql.ErrNoRows {
@@ -885,19 +889,29 @@ func searchEstateNazotte(c echo.Context) error {
 	for _, estate := range estatesInBoundingBox {
 		validatedEstate := Estate{}
 
-		point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
-		query := fmt.Sprintf(`SELECT * FROM estate WHERE id = ? AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(%s))`, coordinates.coordinatesToText(), point)
-		err = db.Get(&validatedEstate, query, estate.ID)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				continue
-			} else {
-				c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
-				return c.NoContent(http.StatusInternalServerError)
-			}
-		} else {
+		point := geo.NewPoint(estate.Latitude, estate.Longitude)
+		points := coordinates.coordinatesToPoint()
+		polygon := geo.NewPolygon(points)
+		if polygon.Contains(point) {
+			validatedEstate = estate
 			estatesInPolygon = append(estatesInPolygon, validatedEstate)
 		}
+		/*
+			// TODO: N+1
+			point := fmt.Sprintf("'POINT(%f %f)'", estate.Latitude, estate.Longitude)
+			query := fmt.Sprintf(`SELECT * FROM estate WHERE id = ? AND ST_Contains(ST_PolygonFromText(%s), ST_GeomFromText(%s))`, coordinates.coordinatesToText(), point)
+			err = db.Get(&validatedEstate, query, estate.ID)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					continue
+				} else {
+					c.Echo().Logger.Errorf("db access is failed on executing validate if estate is in polygon : %v", err)
+					return c.NoContent(http.StatusInternalServerError)
+				}
+			} else {
+				estatesInPolygon = append(estatesInPolygon, validatedEstate)
+			}
+		*/
 	}
 
 	var re EstateSearchResponse
@@ -983,4 +997,13 @@ func (cs Coordinates) coordinatesToText() string {
 		points = append(points, fmt.Sprintf("%f %f", c.Latitude, c.Longitude))
 	}
 	return fmt.Sprintf("'POLYGON((%s))'", strings.Join(points, ","))
+}
+
+func (cs Coordinates) coordinatesToPoint() []*geo.Point {
+	points := make([]*geo.Point, 0, len(cs.Coordinates))
+	for _, c := range cs.Coordinates {
+		point := geo.NewPoint(c.Latitude, c.Longitude)
+		points = append(points, point)
+	}
+	return points
 }
