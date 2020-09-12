@@ -250,8 +250,7 @@ func init() {
 	}
 	db.SetMaxOpenConns(10)
 
-	initEstate()
-
+	initCache()
 }
 
 func main() {
@@ -295,6 +294,7 @@ func main() {
 }
 
 func initialize(c echo.Context) error {
+
 	sqlDir := filepath.Join("..", "mysql", "db")
 	paths := []string{
 		filepath.Join(sqlDir, "0_Schema.sql"),
@@ -317,6 +317,8 @@ func initialize(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 	}
+
+	initCache()
 
 	return c.JSON(http.StatusOK, InitializeResponse{
 		Language: "go",
@@ -397,11 +399,30 @@ func postChair(c echo.Context) error {
 			c.Logger().Errorf("failed to insert chair: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+
+		// update cache
+		chairMap[int64(id)] = Chair{
+			ID:          int64(id),
+			Name:        name,
+			Description: description,
+			Thumbnail:   thumbnail,
+			Price:       int64(price),
+			Height:      int64(height),
+			Width:       int64(width),
+			Depth:       int64(depth),
+			Color:       color,
+			Features:    features,
+			Kind:        kind,
+			Popularity:  int64(popularity),
+			Stock:       int64(stock),
+		}
+
 	}
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
+
 	return c.NoContent(http.StatusCreated)
 }
 
@@ -695,6 +716,23 @@ func postEstate(c echo.Context) error {
 			c.Logger().Errorf("failed to insert estate: %v", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+
+		// update cache
+		estateMap[int64(id)] = Estate{
+			ID:          int64(id),
+			Name:        name,
+			Description: description,
+			Thumbnail:   thumbnail,
+			Address:     address,
+			Latitude:    latitude,
+			Longitude:   longitude,
+			Rent:        int64(rent),
+			DoorHeight:  int64(doorHeight),
+			DoorWidth:   int64(doorWidth),
+			Features:    features,
+			Popularity:  int64(popularity),
+		}
+
 	}
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
