@@ -945,22 +945,37 @@ func searchEstateNazotte(c echo.Context) error {
 	b := coordinates.getBoundingBox()
 	estatesInBoundingBox := []Estate{}
 	// 四角形にしてそのなか範囲にある物件取得
+	query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
+	err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
+	if err == sql.ErrNoRows {
+		c.Echo().Logger.Infof("select * from estate where latitude ...", err)
+		return c.JSON(http.StatusOK, EstateSearchResponse{Count: 0, Estates: []Estate{}})
+	} else if err != nil {
+		c.Echo().Logger.Errorf("database execution error : %v", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	// 囲った線から緯度経度の右上右下左上左下を持ってくる
+	bb := coordinates.getBoundingBox()
+	estatesInBoundingBoxs := []Estate{}
+	// 四角形にしてそのなか範囲にある物件取得
 	for i := range estateMap {
-		if estateMap[i].Latitude <= b.BottomRightCorner.Latitude && estateMap[i].Latitude >= b.TopLeftCorner.Latitude &&
-			estateMap[i].Longitude >= b.BottomRightCorner.Longitude && estateMap[i].Longitude >= b.TopLeftCorner.Longitude {
-			estatesInBoundingBox = append(estatesInBoundingBox, estateMap[i])
+		if estateMap[i].Latitude <= bb.BottomRightCorner.Latitude && estateMap[i].Latitude >= bb.TopLeftCorner.Latitude &&
+			estateMap[i].Longitude >= bb.BottomRightCorner.Longitude && estateMap[i].Longitude >= bb.TopLeftCorner.Longitude {
+			estatesInBoundingBoxs = append(estatesInBoundingBoxs, estateMap[i])
 		}
 	}
 	fmt.Println(len(estatesInBoundingBox))
+	fmt.Println(len(estatesInBoundingBoxs))
 	/*
 		query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
 		err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
 	*/
-	sort.Slice(estatesInBoundingBox, func(i, j int) bool {
-		if estatesInBoundingBox[i].Popularity == estatesInBoundingBox[j].Popularity {
-			return estatesInBoundingBox[i].ID < estatesInBoundingBox[j].ID
+	sort.Slice(estatesInBoundingBoxs, func(i, j int) bool {
+		if estatesInBoundingBoxs[i].Popularity == estatesInBoundingBoxs[j].Popularity {
+			return estatesInBoundingBoxs[i].ID < estatesInBoundingBoxs[j].ID
 		}
-		return estatesInBoundingBox[i].Popularity > estatesInBoundingBox[j].Popularity
+		return estatesInBoundingBoxs[i].Popularity > estatesInBoundingBoxs[j].Popularity
 	})
 
 	estatesInPolygon := []Estate{}
@@ -976,6 +991,7 @@ func searchEstateNazotte(c echo.Context) error {
 		}
 	}
 	fmt.Println(len(estatesInBoundingBox))
+	fmt.Println(len(estatesInBoundingBoxs))
 	fmt.Println(len(estatesInPolygon))
 	var re EstateSearchResponse
 	re.Estates = []Estate{}
