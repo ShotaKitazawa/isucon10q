@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"io/ioutil"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	geo "github.com/kellydunn/golang-geo"
 	"github.com/labstack/echo"
@@ -26,6 +28,12 @@ import (
 const Limit = 20
 const NazotteLimit = 50
 
+var pool = &redis.Pool{
+	MaxIdle:     3,
+	MaxActive:   6,
+	IdleTimeout: 240 * time.Second,
+	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102") },
+}
 var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
@@ -411,9 +419,13 @@ func postChair(c echo.Context) error {
 
 	// update cache
 	for _, v := range chairs {
-		chairLock.Lock()
-		chairMap[v.ID] = *v
-		chairLock.Unlock()
+		data, err := json.Marshal(&v)
+		if err != nil {
+			panic(err)
+		}
+		c := pool.Get()
+		c.Do("SET", "chair_"+strconv.Itoa(int(v.ID)), data)
+		c.Close()
 	}
 
 	return c.NoContent(http.StatusCreated)
@@ -604,11 +616,23 @@ func buyChair(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	chairLock.Lock()
-	tmp := chairMap[int64(id)]
-	tmp.Stock--
-	chairMap[int64(id)] = tmp
-	chairLock.Unlock()
+	// update cache
+	var value Chair
+	con := pool.Get()
+	getData, err := redis.Bytes(con.Do("GET", "chair_"+strconv.Itoa(id)))
+	if err != nil {
+		c.Echo().Logger.Errorf("redis error", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	json.Unmarshal(getData, &value)
+	value.Stock--
+	setData, err := json.Marshal(&value)
+	if err != nil {
+		c.Echo().Logger.Errorf("redis error", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	con.Do("SET", "chair_"+strconv.Itoa(id), setData)
+	con.Close()
 
 	return c.NoContent(http.StatusOK)
 }
@@ -727,9 +751,13 @@ func postEstate(c echo.Context) error {
 
 	// update cache
 	for _, v := range estates {
-		estateLock.Lock()
-		estateMap[v.ID] = *v
-		estateLock.Unlock()
+		data, err := json.Marshal(&v)
+		if err != nil {
+			panic(err)
+		}
+		c := pool.Get()
+		c.Do("SET", "estate_"+strconv.Itoa(int(v.ID)), data)
+		c.Close()
 	}
 
 	return c.NoContent(http.StatusCreated)
