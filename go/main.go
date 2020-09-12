@@ -30,8 +30,8 @@ const Limit = 20
 const NazotteLimit = 50
 
 var pool = &redis.Pool{
-	MaxIdle:     10,
-	MaxActive:   20,
+	MaxIdle:     30,
+	MaxActive:   30,
 	IdleTimeout: 240 * time.Second,
 	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102:6379") },
 }
@@ -436,7 +436,35 @@ func searchChairs(c echo.Context) error {
 	var consCount int
 	chairs := []Chair{}
 
-	for _, chair := range chairMap {
+	// get all keys
+	var ks []string
+	con := pool.Get()
+	keys, err := redis.Strings(con.Do("KEYS", "*"))
+	if err != nil {
+		panic(err)
+	}
+	con.Close()
+	for _, key := range keys {
+		if strings.HasPrefix(key, "chair_") {
+			ks = append(ks, key)
+		}
+	}
+
+	for _, key := range ks {
+
+		con := pool.Get()
+		var chair Chair
+		getData, err := redis.Bytes(con.Do("GET", key))
+		if err != nil {
+			c.Echo().Logger.Errorf("redis error", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		if err := json.Unmarshal(getData, &chair); err != nil {
+			c.Echo().Logger.Errorf("redis error", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		con.Close()
+
 		if c.QueryParam("priceRangeId") != "" {
 			chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
 			if err != nil {
