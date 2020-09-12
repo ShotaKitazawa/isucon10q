@@ -45,4 +45,5 @@ ALTER table isuumo.chair add index popularity_minus(popularity_minus, id);
 ALTER table isuumo.estate add index popularity_minus(popularity_minus, id);
 
 /* minus.go 用*/
+ALTER TABLE isuumo.chair add index popularity(popularity);
 ALTER TABLE isuumo.estate add index popularity(popularity);
