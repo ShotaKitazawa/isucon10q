@@ -410,41 +410,9 @@ func postChair(c echo.Context) error {
 	}
 
 	// update cache
-	for _, row := range records {
-		rm := RecordMapper{Record: row}
-		id := rm.NextInt()
-		name := rm.NextString()
-		description := rm.NextString()
-		thumbnail := rm.NextString()
-		price := rm.NextInt()
-		height := rm.NextInt()
-		width := rm.NextInt()
-		depth := rm.NextInt()
-		color := rm.NextString()
-		features := rm.NextString()
-		kind := rm.NextString()
-		popularity := rm.NextInt()
-		stock := rm.NextInt()
-		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
-			return c.NoContent(http.StatusBadRequest)
-		}
+	for _, v := range chairs {
 		chairLock.Lock()
-		chairMap[int64(id)] = Chair{
-			ID:          int64(id),
-			Name:        name,
-			Description: description,
-			Thumbnail:   thumbnail,
-			Price:       int64(price),
-			Height:      int64(height),
-			Width:       int64(width),
-			Depth:       int64(depth),
-			Color:       color,
-			Features:    features,
-			Kind:        kind,
-			Popularity:  int64(popularity),
-			Stock:       int64(stock),
-		}
+		chairMap[v.ID] = *v
 		chairLock.Unlock()
 	}
 
@@ -717,37 +685,40 @@ func postEstate(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	tx, err := db.Begin()
+	tx, err := db.Beginx()
 	if err != nil {
 		c.Logger().Errorf("failed to begin tx: %v", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	defer tx.Rollback()
+	estates := make([]*Estate, 0, len(records))
 	for _, row := range records {
 		rm := RecordMapper{Record: row}
-		id := rm.NextInt()
-		name := rm.NextString()
-		description := rm.NextString()
-		thumbnail := rm.NextString()
-		address := rm.NextString()
-		latitude := rm.NextFloat()
-		longitude := rm.NextFloat()
-		rent := rm.NextInt()
-		doorHeight := rm.NextInt()
-		doorWidth := rm.NextInt()
-		features := rm.NextString()
-		popularity := rm.NextInt()
+		estate := &Estate{
+			ID:          int64(rm.NextInt()),
+			Name:        rm.NextString(),
+			Description: rm.NextString(),
+			Thumbnail:   rm.NextString(),
+			Address:     rm.NextString(),
+			Latitude:    rm.NextFloat(),
+			Longitude:   rm.NextFloat(),
+			Rent:        int64(rm.NextInt()),
+			DoorHeight:  int64(rm.NextInt()),
+			DoorWidth:   int64(rm.NextInt()),
+			Features:    rm.NextString(),
+			Popularity:  int64(rm.NextInt()),
+		}
 		if err := rm.Err(); err != nil {
 			c.Logger().Errorf("failed to read record: %v", err)
 			return c.NoContent(http.StatusBadRequest)
 		}
-		//_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity)
-		_, err := tx.Exec("INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity, popularity_minus) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", id, name, description, thumbnail, address, latitude, longitude, rent, doorHeight, doorWidth, features, popularity, popularity*-1)
-		if err != nil {
-			c.Logger().Errorf("failed to insert estate: %v", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+		estates = append(estates, estate)
 
+	}
+	q := "INSERT INTO estate(id, name, description, thumbnail, address, latitude, longitude, rent, door_height, door_width, features, popularity, popularity_minus) VALUES(:id, :name, :description, :thumbnail, :address, :latitude, :longitude, :rent, :door_height, :door_width, :features, :popularity, :popularity_minus)"
+	if _, err := tx.NamedExec(q, estates); err != nil {
+		c.Logger().Errorf("failed to insert estate: %v", err)
+		return c.NoContent(http.StatusInternalServerError)
 	}
 	if err := tx.Commit(); err != nil {
 		c.Logger().Errorf("failed to commit tx: %v", err)
@@ -755,41 +726,10 @@ func postEstate(c echo.Context) error {
 	}
 
 	// update cache
-	for _, row := range records {
-		rm := RecordMapper{Record: row}
-		id := rm.NextInt()
-		name := rm.NextString()
-		description := rm.NextString()
-		thumbnail := rm.NextString()
-		address := rm.NextString()
-		latitude := rm.NextFloat()
-		longitude := rm.NextFloat()
-		rent := rm.NextInt()
-		doorHeight := rm.NextInt()
-		doorWidth := rm.NextInt()
-		features := rm.NextString()
-		popularity := rm.NextInt()
-		if err := rm.Err(); err != nil {
-			c.Logger().Errorf("failed to read record: %v", err)
-			return c.NoContent(http.StatusBadRequest)
-		}
+	for _, v := range estates {
 		estateLock.Lock()
-		estateMap[int64(id)] = Estate{
-			ID:          int64(id),
-			Name:        name,
-			Description: description,
-			Thumbnail:   thumbnail,
-			Address:     address,
-			Latitude:    latitude,
-			Longitude:   longitude,
-			Rent:        int64(rent),
-			DoorHeight:  int64(doorHeight),
-			DoorWidth:   int64(doorWidth),
-			Features:    features,
-			Popularity:  int64(popularity),
-		}
+		estateMap[v.ID] = *v
 		estateLock.Unlock()
-
 	}
 
 	return c.NoContent(http.StatusCreated)
