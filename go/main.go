@@ -951,6 +951,7 @@ func searchEstateNazotte(c echo.Context) error {
 			estatesInBoundingBox = append(estatesInBoundingBox, estateMap[i])
 		}
 	}
+	fmt.Println(len(estatesInBoundingBox))
 	/*
 		query := `SELECT * FROM estate WHERE latitude <= ? AND latitude >= ? AND longitude <= ? AND longitude >= ? ORDER BY popularity_minus ASC, id ASC`
 		err = db.Select(&estatesInBoundingBox, query, b.BottomRightCorner.Latitude, b.TopLeftCorner.Latitude, b.BottomRightCorner.Longitude, b.TopLeftCorner.Longitude)
