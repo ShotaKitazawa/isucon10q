@@ -23,7 +23,7 @@ func initCache() {
 	for _, estate := range estateStructs {
 		estateMap[estate.ID] = estate
 	}
-	for _, chair := range chairMap {
+	for _, chair := range chairStructs {
 		chairMap[chair.ID] = chair
 	}
 }

@@ -548,17 +548,17 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
-	for i := range chairStructs {
+	for i := range chairMap {
 		// price で比較するとき
 		if chairPrices.ID != -1 && chairPrices.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairPrices.Min > chairStructs[i].Price || chairStructs[i].Price >= chairPrices.Max {
+			if chairPrices.Min > chairMap[i].Price || chairMap[i].Price >= chairPrices.Max {
 				continue
 			}
 		} else {
 			if chairPrices.ID != -1 {
-				if chairPrices.Min > chairStructs[i].Price {
+				if chairPrices.Min > chairMap[i].Price {
 					continue
 				}
 			}
@@ -566,44 +566,45 @@ func searchChairs(c echo.Context) error {
 		if chairHeights.ID != -1 && chairHeights.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairHeights.Min > chairStructs[i].Height || chairStructs[i].Height >= chairHeights.Max {
+			if chairHeights.Min > chairMap[i].Height || chairMap[i].Height >= chairHeights.Max {
 				continue
 			}
 		} else {
-			if chairHeights.ID != -1 && chairHeights.Min < chairStructs[i].Height {
+			if chairHeights.ID != -1 && chairHeights.Min < chairMap[i].Height {
 				continue
 			}
 		}
 		if chairWidths.ID != -1 && chairWidths.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairWidths.Min > chairStructs[i].Width || chairStructs[i].Width >= chairWidths.Max {
+			if chairWidths.Min > chairMap[i].Width || chairMap[i].Width >= chairWidths.Max {
 				continue
 			}
 		} else {
-			if chairWidths.ID != -1 && chairWidths.Min < chairStructs[i].Width {
+			if chairWidths.ID != -1 && chairWidths.Min < chairMap[i].Width {
 				continue
 			}
 		}
 		if chairDepths.ID != -1 && chairDepths.Max != -1 {
 			// max が -1 なら使わない
 			// 範囲に入ってなかったらスルー
-			if chairDepths.Min > chairStructs[i].Depth || chairStructs[i].Depth >= chairDepths.Max {
+			if chairDepths.Min > chairMap[i].Depth || chairMap[i].Depth >= chairDepths.Max {
 				continue
 			}
 		} else {
-			if chairDepths.ID != -1 && chairDepths.Min < chairStructs[i].Depth {
+			if chairDepths.ID != -1 && chairDepths.Min < chairMap[i].Depth {
 				continue
 			}
 		}
-		if kind != "" && chairStructs[i].Kind != kind {
+		// kind に入っていて kind が一致していなかったら対象じゃない
+		if kind != "" && chairMap[i].Kind != kind {
 			continue
 		}
-		if color != "" && chairStructs[i].Color != color {
+		if color != "" && chairMap[i].Color != color {
 			continue
 		}
 		if len(features) != 0 {
-			chairFeatures := strings.Split(chairStructs[i].Features, ",")
+			chairFeatures := strings.Split(chairMap[i].Features, ",")
 			count := 0
 			for j := range features {
 				for h := range chairFeatures {
@@ -617,7 +618,7 @@ func searchChairs(c echo.Context) error {
 				continue
 			}
 		}
-		if chairStructs[i].Stock <= 0 {
+		if chairMap[i].Stock <= 0 {
 			continue
 		}
 		returnChairs = append(returnChairs, chairStructs[i])
@@ -631,8 +632,16 @@ func searchChairs(c echo.Context) error {
 
 	var res ChairSearchResponse
 	res.Count = int64(len(returnChairs))
+
 	// paging
-	returnChairs = returnChairs[page*perPage : (page+1)*perPage]
+	count := len(returnChairs)
+
+	if (page+1)*perPage < count {
+		returnChairs = returnChairs[page*perPage : (page+1)*perPage]
+	} else {
+		mod := count % perPage
+		returnChairs = returnChairs[page*perPage : (page)*perPage+mod]
+	}
 	res.Chairs = returnChairs
 
 	return c.JSON(http.StatusOK, res)
