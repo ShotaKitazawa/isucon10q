@@ -706,7 +706,7 @@ func searchChairs(c echo.Context) error {
 	//	}
 	//}
 	res.Count = int64(len(chairs))
-	res.Chairs = chairsCache
+	res.Chairs = chairs
 
 	return c.JSON(http.StatusOK, res)
 }
