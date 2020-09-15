@@ -437,7 +437,6 @@ func searchChairs(c echo.Context) error {
 	chairs := []Chair{}
 
 	// get all keys
-	var ks []interface{}
 	con := pool.Get()
 	keys, err := redis.Strings(con.Do("KEYS", "*"))
 	if err != nil {
@@ -445,14 +444,14 @@ func searchChairs(c echo.Context) error {
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	con.Close()
+	var ks []interface{}
 	for _, key := range keys {
-		fmt.Println(key)
-		if strings.HasPrefix(key, "chair_") {
-			ks = append(ks, key)
-		}
+	 if strings.HasPrefix(key, "chair_") {
+	 	ks = append(ks, key)
+	 }
 	}
 	con = pool.Get()
-	datata, err := redis.Bytes(con.Do("MGET", ks...))
+	datata, err := redis.Bytes(con.Do("MGET", ks))
 	if err != nil {
 		c.Echo().Logger.Errorf("redis error", err)
 		return c.NoContent(http.StatusInternalServerError)
