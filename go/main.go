@@ -446,6 +446,7 @@ func searchChairs(c echo.Context) error {
 	}
 	con.Close()
 	for _, key := range keys {
+		fmt.Println(key)
 		if strings.HasPrefix(key, "chair_") {
 			ks = append(ks, key)
 		}
