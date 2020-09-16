@@ -21,6 +21,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
+	"github.com/k0kubun/pp"
 	geo "github.com/kellydunn/golang-geo"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -432,7 +433,6 @@ func searchChairs(c echo.Context) error {
 	var consCount int
 
 	// get all keys
-	//result, err := rdb.Do(context.Background(), "KEYS", "*").Result()
 	keys, err := rdb.Keys(context.Background(), "*").Result()
 	if err != nil {
 		c.Echo().Logger.Errorf("redis error: keys *", err)
@@ -452,14 +452,12 @@ func searchChairs(c echo.Context) error {
 		chairStr := chairInterface.(string)
 		chairBytes := *(*[]byte)(unsafe.Pointer(&chairStr))
 
-		// if !ok {
-		// 	c.Echo().Logger.Errorf("redis error: cast", err)
-		// 	return c.NoContent(http.StatusInternalServerError)
-		// }
 		if err := json.Unmarshal(chairBytes, &chair); err != nil {
 			c.Echo().Logger.Errorf("redis error: unmarshal", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
+
+		pp.Print(chair)
 
 		if c.QueryParam("priceRangeId") != "" {
 			chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
