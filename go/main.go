@@ -433,14 +433,10 @@ func searchChairs(c echo.Context) error {
 	chairs := []Chair{}
 
 	// get all keys
-	result, err := rdb.Do(context.Background(), "KEYS", "*").Result()
+	//result, err := rdb.Do(context.Background(), "KEYS", "*").Result()
+	keys, err := rdb.Keys(context.Background(), "*").Result()
 	if err != nil {
 		c.Echo().Logger.Errorf("redis error: keys *", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	keys, ok := result.([]string)
-	if !ok {
-		c.Echo().Logger.Errorf("redis error: cast", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 	chairsInterface, err := rdb.MGet(context.Background(), keys...).Result()
