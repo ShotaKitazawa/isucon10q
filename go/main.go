@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"unsafe"
 
 	"io/ioutil"
 	"net/http"
@@ -451,7 +452,7 @@ func searchChairs(c echo.Context) error {
 			return c.NoContent(http.StatusInternalServerError)
 		}
 		var chair Chair
-		if err := json.Unmarshal([]byte(chairStr), &chair); err != nil {
+		if err := json.Unmarshal(sbytes(chairStr), &chair); err != nil {
 			c.Echo().Logger.Errorf("redis error: unmarshal", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
@@ -1124,4 +1125,8 @@ func (cs Coordinates) coordinatesToPoint() []*geo.Point {
 		points = append(points, point)
 	}
 	return points
+}
+
+func sbytes(s string) []byte {
+	return *(*[]byte)(unsafe.Pointer(&s))
 }
