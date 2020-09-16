@@ -429,7 +429,6 @@ func postChair(c echo.Context) error {
 
 func searchChairs(c echo.Context) error {
 	var consCount int
-	chairs := []Chair{}
 
 	// get all keys
 	//result, err := rdb.Do(context.Background(), "KEYS", "*").Result()
@@ -443,7 +442,21 @@ func searchChairs(c echo.Context) error {
 		c.Echo().Logger.Errorf("redis error: mget", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	fmt.Println(chairsInterface[0])
+
+	chairs := []Chair{}
+	for _, chairInterface := range chairsInterface {
+		chairStr, ok := chairInterface.(string)
+		if !ok {
+			c.Echo().Logger.Errorf("redis error: cast", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		var chair Chair
+		if err := json.Unmarshal([]byte(chairStr), &chair); err != nil {
+			c.Echo().Logger.Errorf("redis error: unmarshal", err)
+			return c.NoContent(http.StatusInternalServerError)
+		}
+		chairs = append(chairs, chair)
+	}
 
 	for _, chair := range chairs {
 
