@@ -6,7 +6,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"io/ioutil"
 	"net/http"
@@ -444,7 +443,7 @@ func searchChairs(c echo.Context) error {
 		c.Echo().Logger.Errorf("redis error: mget", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	fmt.Println(reflect.TypeOf(chairsInterface[0]))
+	fmt.Println(chairsInterface[0])
 
 	for _, chair := range chairs {
 
