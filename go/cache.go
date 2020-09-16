@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"strconv"
 )
@@ -29,22 +30,20 @@ func initCache() {
 		if err != nil {
 			panic(err)
 		}
-		c := pool.Get()
-		if _, err := c.Do("SET", "estate_"+strconv.Itoa(int(estate.ID)), data); err != nil {
+		status := rdb.Set(context.Background(), "estate_"+strconv.Itoa(int(estate.ID)), data, 0)
+		if _, err := status.Result(); err != nil {
 			panic(err)
 		}
-		c.Close()
 	}
 	for _, chair := range chairStructs {
 		data, err := json.Marshal(&chair)
 		if err != nil {
 			panic(err)
 		}
-		c := pool.Get()
-		if _, err := c.Do("SET", "chair_"+strconv.Itoa(int(chair.ID)), data); err != nil {
+		status := rdb.Set(context.Background(), "chair_"+strconv.Itoa(int(chair.ID)), data, 0)
+		if _, err := status.Result(); err != nil {
 			panic(err)
 		}
-		c.Close()
 	}
 }
 

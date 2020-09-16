@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	"io/ioutil"
 	"net/http"
@@ -17,8 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-redis/redis/v8"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	geo "github.com/kellydunn/golang-geo"
 	"github.com/labstack/echo"
@@ -29,12 +29,9 @@ import (
 const Limit = 20
 const NazotteLimit = 50
 
-var pool = &redis.Pool{
-	MaxIdle:     30,
-	MaxActive:   30,
-	IdleTimeout: 240 * time.Second,
-	Dial:        func() (redis.Conn, error) { return redis.Dial("tcp", "10.161.0.102:6379") },
-}
+var rdb = redis.NewClient(&redis.Options{
+	Addr: "10.161.0.102:6379",
+})
 var db *sqlx.DB
 var mySQLConnectionData *MySQLConnectionEnv
 var chairSearchCondition ChairSearchCondition
@@ -424,9 +421,7 @@ func postChair(c echo.Context) error {
 		if err != nil {
 			panic(err)
 		}
-		c := pool.Get()
-		c.Do("SET", "chair_"+strconv.Itoa(int(v.ID)), data)
-		c.Close()
+		rdb.Set(context.Background(), "chair_"+strconv.Itoa(int(v.ID)), data, 0)
 	}
 
 	return c.NoContent(http.StatusCreated)
@@ -437,28 +432,26 @@ func searchChairs(c echo.Context) error {
 	chairs := []Chair{}
 
 	// get all keys
-	con := pool.Get()
-	keys, err := redis.Strings(con.Do("KEYS", "*"))
-	if err != nil {
-		c.Echo().Logger.Errorf("redis error", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	con.Close()
-	var ks []interface{}
-	for _, key := range keys {
-	 if strings.HasPrefix(key, "chair_") {
-	 	ks = append(ks, key)
-	 }
-	}
-	con = pool.Get()
-	datata, err := redis.Bytes(con.Do("MGET", ks))
-	if err != nil {
-		c.Echo().Logger.Errorf("redis error", err)
-		return c.NoContent(http.StatusInternalServerError)
-	}
-	json.Unmarshal(datata, &chairs)
-
-	con.Close()
+	// con := pool.Get()
+	// keys, err := redis.Strings(con.Do("KEYS", "*"))
+	// if err != nil {
+	// 	c.Echo().Logger.Errorf("redis error", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// con.Close()
+	// var ks []interface{}
+	// for _, key := range keys {
+	// 	if strings.HasPrefix(key, "chair_") {
+	// 		ks = append(ks, key)
+	// 	}
+	// }
+	// con = pool.Get()
+	// datata, err := redis.Bytes(con.Do("MGET", ks))
+	// if err != nil {
+	// 	c.Echo().Logger.Errorf("redis error", err)
+	// 	return c.NoContent(http.StatusInternalServerError)
+	// }
+	// json.Unmarshal(datata, &chairs)
 
 	for _, chair := range chairs {
 
@@ -679,8 +672,7 @@ func buyChair(c echo.Context) error {
 
 	// update cache
 	var value Chair
-	con := pool.Get()
-	getData, err := redis.Bytes(con.Do("GET", "chair_"+strconv.Itoa(id)))
+	getData, err := rdb.Get(context.Background(), "chair_"+strconv.Itoa(id)).Bytes()
 	if err != nil {
 		c.Echo().Logger.Errorf("redis error", err)
 		return c.NoContent(http.StatusInternalServerError)
@@ -692,8 +684,7 @@ func buyChair(c echo.Context) error {
 		c.Echo().Logger.Errorf("redis error", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	con.Do("SET", "chair_"+strconv.Itoa(id), setData)
-	con.Close()
+	rdb.Set(context.Background(), "chair_"+strconv.Itoa(id), setData, 0)
 
 	return c.NoContent(http.StatusOK)
 }
@@ -816,9 +807,7 @@ func postEstate(c echo.Context) error {
 		if err != nil {
 			panic(err)
 		}
-		c := pool.Get()
-		c.Do("SET", "estate_"+strconv.Itoa(int(v.ID)), data)
-		c.Close()
+		rdb.Set(context.Background(), "estate_"+strconv.Itoa(int(v.ID)), data, 0)
 	}
 
 	return c.NoContent(http.StatusCreated)
