@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"io/ioutil"
 	"net/http"
@@ -432,26 +433,22 @@ func searchChairs(c echo.Context) error {
 	chairs := []Chair{}
 
 	// get all keys
-	// con := pool.Get()
-	// keys, err := redis.Strings(con.Do("KEYS", "*"))
-	// if err != nil {
-	// 	c.Echo().Logger.Errorf("redis error", err)
-	// 	return c.NoContent(http.StatusInternalServerError)
-	// }
-	// con.Close()
-	// var ks []interface{}
-	// for _, key := range keys {
-	// 	if strings.HasPrefix(key, "chair_") {
-	// 		ks = append(ks, key)
-	// 	}
-	// }
-	// con = pool.Get()
-	// datata, err := redis.Bytes(con.Do("MGET", ks))
-	// if err != nil {
-	// 	c.Echo().Logger.Errorf("redis error", err)
-	// 	return c.NoContent(http.StatusInternalServerError)
-	// }
-	// json.Unmarshal(datata, &chairs)
+	result, err := rdb.Do(context.Background(), "KEYS", "*").Result()
+	if err != nil {
+		c.Echo().Logger.Errorf("redis error: keys *", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	keys, ok := result.([]string)
+	if !ok {
+		c.Echo().Logger.Errorf("redis error: cast", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	chairsInterface, err := rdb.MGet(context.Background(), keys...).Result()
+	if err != nil {
+		c.Echo().Logger.Errorf("redis error: mget", err)
+		return c.NoContent(http.StatusInternalServerError)
+	}
+	fmt.Println(reflect.TypeOf(chairsInterface))
 
 	for _, chair := range chairs {
 
