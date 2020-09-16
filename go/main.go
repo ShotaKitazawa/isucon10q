@@ -6,6 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"unsafe"
 
 	"io/ioutil"
 	"net/http"
@@ -437,28 +438,28 @@ func searchChairs(c echo.Context) error {
 		c.Echo().Logger.Errorf("redis error: keys *", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	chairsInterface, err := rdb.MGet(context.Background(), keys...).Result()
+	chairInterfaces, err := rdb.MGet(context.Background(), keys...).Result()
 	if err != nil {
 		c.Echo().Logger.Errorf("redis error: mget", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
 
-	chairs := []Chair{}
-	for _, chairInterface := range chairsInterface {
-		chairBytes, ok := chairInterface.([]byte)
-		if !ok {
-			c.Echo().Logger.Errorf("redis error: cast", err)
-			return c.NoContent(http.StatusInternalServerError)
-		}
+	var chairs []Chair
+
+	for _, chairInterface := range chairInterfaces {
 		var chair Chair
+
+		chairStr := chairInterface.(string)
+		chairBytes := *(*[]byte)(unsafe.Pointer(&chairStr))
+
+		// if !ok {
+		// 	c.Echo().Logger.Errorf("redis error: cast", err)
+		// 	return c.NoContent(http.StatusInternalServerError)
+		// }
 		if err := json.Unmarshal(chairBytes, &chair); err != nil {
 			c.Echo().Logger.Errorf("redis error: unmarshal", err)
 			return c.NoContent(http.StatusInternalServerError)
 		}
-		chairs = append(chairs, chair)
-	}
-
-	for _, chair := range chairs {
 
 		if c.QueryParam("priceRangeId") != "" {
 			chairPrice, err := getRange(chairSearchCondition.Price, c.QueryParam("priceRangeId"))
