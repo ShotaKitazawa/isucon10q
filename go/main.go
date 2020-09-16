@@ -444,7 +444,7 @@ func searchChairs(c echo.Context) error {
 		c.Echo().Logger.Errorf("redis error: mget", err)
 		return c.NoContent(http.StatusInternalServerError)
 	}
-	fmt.Println(reflect.TypeOf(chairsInterface))
+	fmt.Println(reflect.TypeOf(chairsInterface[0]))
 
 	for _, chair := range chairs {
 
